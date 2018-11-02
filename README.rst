@@ -25,7 +25,7 @@ Requirements
 ============
 
 ``asyncqt`` requires Python >= 3.5 and PyQt5 or PySide2. The Qt API can be
-explicitely set by using the ``QT_API`` environment variable.
+explicitly set by using the ``QT_API`` environment variable.
 
 Installation
 ============

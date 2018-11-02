@@ -1,4 +1,4 @@
-asyncqt - asyncio + Qt
+asyncqt - asyncio + PyQt5/PySide2
 ======================
 
 .. image:: https://travis-ci.org/gmarull/asyncqt.svg?branch=master
@@ -18,8 +18,8 @@ asyncqt - asyncio + Qt
     :alt: PyPI Version
 
 ``asyncqt`` is an implementation of the ``PEP 3156`` event-loop with Qt. This
-package is a fork of ``quamash`` with some extra utilities, examples and
-simplified CI.
+package is a fork of ``quamash`` focusing on modern Python versions, with
+some extra utilities, examples and simplified CI.
 
 Requirements
 ============

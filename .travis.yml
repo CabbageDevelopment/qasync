@@ -1,0 +1,27 @@
+language: python
+sudo: required
+dist: xenial
+
+python:
+  - "3.5"
+  - "3.6"
+  - "3.7"
+
+cache: pip
+
+before_install:
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
+
+install:
+  - pip install pipenv
+  - pipenv install --dev
+  - pipenv run pip install PyQt5 PySide2
+
+script:
+  - pipenv run flake8 asyncqt
+  - QT_API=PyQt5 pipenv run py.test -v --cov=asyncqt
+  - QT_API=PySide2 pipenv run py.test -v --cov=asyncqt
+
+after_success:
+  - codecov

@@ -1,0 +1,25 @@
+environment:
+  matrix:
+    - PYTHON: "C:\\Python35"
+    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python37"
+
+init:
+  - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%
+
+install:
+  - pip install pipenv
+  - pipenv install --dev
+  - pipenv run pip install PyQt5 PySide2
+  # FIX: colorama not installed by pipenv
+  - pipenv run pip install colorama
+  - choco install codecov
+
+build: off
+
+test_script:
+  - set QT_API=PyQt5&& pipenv run py.test -v --cov=asyncqt
+  - set QT_API=PySide2&& pipenv run py.test -v --cov=asyncqt
+
+on_success:
+  - codecov -f .coverage

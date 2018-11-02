@@ -11,7 +11,7 @@ BSD License
 __author__ = ('Gerard Marull-Paretas <gerard@teslabs.com>, '
               'Mark Harviston <mark.harviston@gmail.com>, '
               'Arve Knudsen <arve.knudsen@gmail.com>')
-__version__ = '0.7.0.dev0'
+__version__ = '0.7.0'
 __url__ = 'https://github.com/gmarull/asyncqt'
 __license__ = 'BSD'
 __all__ = ['QEventLoop', 'QThreadExecutor', 'asyncSlot', 'asyncClose']

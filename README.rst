@@ -16,6 +16,10 @@ asyncqt - asyncio + PyQt5/PySide2
 .. image:: https://img.shields.io/pypi/v/asyncqt.svg
     :target: https://pypi.python.org/pypi/asyncqt
     :alt: PyPI Version
+    
+.. image:: https://img.shields.io/conda/vn/conda-forge/asyncqt.svg
+    :target: https://anaconda.org/conda-forge/asyncqt    
+    :alt: Conda Version
 
 ``asyncqt`` is an implementation of the ``PEP 3156`` event-loop with Qt. This
 package is a fork of ``quamash`` focusing on modern Python versions, with

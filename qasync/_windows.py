@@ -44,7 +44,8 @@ class _ProactorEventLoop(asyncio.ProactorEventLoop):
             except OSError:
                 self._logger.warning('Event callback failed', exc_info=sys.exc_info())
             else:
-                f.set_result(value)
+                if not f.cancelled():
+                    f.set_result(value)
 
     def _before_run_forever(self):
         self.__event_poller.start(self._proactor)

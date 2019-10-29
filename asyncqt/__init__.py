@@ -250,7 +250,7 @@ class _QEventLoop:
     ...     loop.run_until_complete(xplusy(2, 2))
     """
 
-    def __init__(self, app=None):
+    def __init__(self, app=None, set_running_loop=True):
         self.__app = app or QApplication.instance()
         assert self.__app is not None, 'No QApplication has been instantiated'
         self.__is_running = False
@@ -266,8 +266,10 @@ class _QEventLoop:
         signaller.signal.connect(lambda callback, args: self.call_soon(callback, *args))
 
         assert self.__app is not None
-
         super().__init__()
+        
+        if set_running_loop:
+            asyncio.events._set_running_loop(self)
 
     def run_forever(self):
         """Run eventloop forever."""

@@ -8,28 +8,27 @@ Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
 BSD License
 """
 
-__author__ = ('Gerard Marull-Paretas <gerard@teslabs.com>, '
+__author__ = ('Sam McCormack',
+              'Gerard Marull-Paretas <gerard@teslabs.com>, '
               'Mark Harviston <mark.harviston@gmail.com>, '
               'Arve Knudsen <arve.knudsen@gmail.com>')
-__version__ = '0.8.0.dev0'
-__url__ = 'https://github.com/gmarull/asyncqt'
+__version__ = '0.9.0'
+__url__ = 'https://github.com/CabbageDevelopment/qasync'
 __license__ = 'BSD'
 __all__ = ['QEventLoop', 'QThreadExecutor', 'asyncSlot', 'asyncClose']
 
-import sys
-import os
 import asyncio
-import time
-import itertools
-from queue import Queue
-from concurrent.futures import Future
-import logging
-import importlib
 import functools
-
+import importlib
+import itertools
+import logging
+import os
+import sys
+import time
+from concurrent.futures import Future
+from queue import Queue
 
 logger = logging.getLogger(__name__)
-
 
 try:
     QtModuleName = os.environ['QT_API']
@@ -57,19 +56,19 @@ QtGui = importlib.import_module(QtModuleName + '.QtGui', package=QtModuleName)
 if QtModuleName == 'PyQt5':
     from PyQt5 import QtWidgets
     from PyQt5.QtCore import pyqtSlot as Slot
+
     QApplication = QtWidgets.QApplication
 elif QtModuleName == 'PySide2':
     from PySide2 import QtWidgets
     from PySide2.QtCore import Slot
-    QApplication = QtWidgets.QApplication
 
+    QApplication = QtWidgets.QApplication
 
 from ._common import with_logger  # noqa
 
 
 @with_logger
 class _QThreadWorker(QtCore.QThread):
-
     """
     Read jobs from the queue and then execute them.
 
@@ -93,7 +92,7 @@ class _QThreadWorker(QtCore.QThread):
             future, callback, args, kwargs = command
             self._logger.debug(
                 '#{} got callback {} with args {} and kwargs {} from queue'
-                .format(self.__num, callback, args, kwargs),
+                    .format(self.__num, callback, args, kwargs),
             )
             if future.set_running_or_notify_cancel():
                 self._logger.debug('Invoking callback')
@@ -117,13 +116,12 @@ class _QThreadWorker(QtCore.QThread):
 
 @with_logger
 class QThreadExecutor:
-
     """
     ThreadExecutor that produces QThreads.
 
     Same API as `concurrent.futures.Executor`
 
-    >>> from asyncqt import QThreadExecutor
+    >>> from qasync import QThreadExecutor
     >>> with QThreadExecutor(5) as executor:
     ...     f = executor.submit(lambda x: 2 + x, 2)
     ...     r = f.result()
@@ -147,7 +145,7 @@ class QThreadExecutor:
         future = Future()
         self._logger.debug(
             'Submitting callback {} with args {} and kwargs {} to thread worker queue'
-            .format(callback, args, kwargs))
+                .format(callback, args, kwargs))
         self.__queue.put((future, callback, args, kwargs))
         return future
 
@@ -183,6 +181,7 @@ def _make_signaller(qtimpl_qtcore, *args):
             signal = qtimpl_qtcore.Signal(*args)
         except AttributeError:
             signal = qtimpl_qtcore.pyqtSignal(*args)
+
     return Signaller()
 
 
@@ -231,7 +230,6 @@ class _SimpleTimer(QtCore.QObject):
 
 @with_logger
 class _QEventLoop:
-
     """
     Implementation of asyncio event loop that uses the Qt Event loop.
 
@@ -290,7 +288,9 @@ class _QEventLoop:
         self._logger.debug('Running {} until complete'.format(future))
         future = asyncio.ensure_future(future, loop=self)
 
-        def stop(*args): self.stop()  # noqa
+        def stop(*args):
+            self.stop()  # noqa
+
         future.add_done_callback(stop)
         try:
             self.run_forever()
@@ -353,7 +353,7 @@ class _QEventLoop:
 
         self._logger.debug(
             'Registering callback {} to be invoked with arguments {} after {} second(s)'
-            .format(callback, args, delay))
+                .format(callback, args, delay))
 
         if sys.version_info >= (3, 7):
             return self._add_callback(asyncio.Handle(callback, args, self, context=context), delay)
@@ -467,7 +467,7 @@ class _QEventLoop:
         if fd not in notifiers:
             self._logger.warning(
                 'Socket notifier for fd {} is ready, even though it should be disabled, not calling {} and disabling'
-                .format(fd, callback),
+                    .format(fd, callback),
             )
             notifier.setEnabled(False)
             return
@@ -602,15 +602,17 @@ class _QEventLoop:
         # In some cases, the error method itself fails, don't have a lot of options in that case
         try:
             cls._logger.error(*args, **kwds)
-        except: # noqa E722
+        except:  # noqa E722
             sys.stderr.write('{!r}, {!r}\n'.format(args, kwds))
 
 
 from ._unix import _SelectorEventLoop  # noqa
+
 QSelectorEventLoop = type('QSelectorEventLoop', (_QEventLoop, _SelectorEventLoop), {})
 
 if os.name == 'nt':
     from ._windows import _ProactorEventLoop
+
     QIOCPEventLoop = type('QIOCPEventLoop', (_QEventLoop, _ProactorEventLoop), {})
     QEventLoop = QIOCPEventLoop
 else:
@@ -628,6 +630,7 @@ class _Cancellable:
 
 def asyncClose(fn):
     """Allow to run async code before application is closed."""
+
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         f = asyncio.ensure_future(fn(*args, **kwargs))
@@ -639,10 +642,13 @@ def asyncClose(fn):
 
 def asyncSlot(*args):
     """Make a Qt async slot run on asyncio loop."""
+
     def outer_decorator(fn):
         @Slot(*args)
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             asyncio.ensure_future(fn(*args, **kwargs))
+
         return wrapper
+
     return outer_decorator

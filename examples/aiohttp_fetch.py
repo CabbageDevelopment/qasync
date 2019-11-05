@@ -2,7 +2,7 @@ import sys
 import asyncio
 
 import aiohttp
-from asyncqt import QEventLoop, asyncSlot, asyncClose
+from qasync import QEventLoop, asyncSlot, asyncClose
 
 # from PyQt5.QtWidgets import (
 from PySide2.QtWidgets import (

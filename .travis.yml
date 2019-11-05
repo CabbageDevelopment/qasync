@@ -19,9 +19,9 @@ install:
   - pipenv run pip install PyQt5 PySide2
 
 script:
-  - pipenv run flake8 asyncqt
-  - QT_API=PyQt5 pipenv run py.test -v --cov=asyncqt
-  - QT_API=PySide2 pipenv run py.test -v --cov=asyncqt
+  - pipenv run flake8 qasync
+  - QT_API=PyQt5 pipenv run py.test -v --cov=qasync
+  - QT_API=PySide2 pipenv run py.test -v --cov=qasync
 
 after_success:
   - codecov

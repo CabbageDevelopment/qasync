@@ -20,5 +20,5 @@ else:
 
 @fixture(scope='session')
 def application():
-    from asyncqt import QApplication
+    from qasync import QApplication
     return QApplication([])

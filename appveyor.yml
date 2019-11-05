@@ -18,8 +18,8 @@ install:
 build: off
 
 test_script:
-  - set QT_API=PyQt5&& pipenv run py.test -v --cov=asyncqt --cov-report xml
-  - set QT_API=PySide2&& pipenv run py.test -v --cov=asyncqt --cov-report xml
+  - set QT_API=PyQt5&& pipenv run py.test -v --cov=qasync --cov-report xml
+  - set QT_API=PySide2&& pipenv run py.test -v --cov=qasync --cov-report xml
 
 on_success:
   - codecov -f coverage.xml

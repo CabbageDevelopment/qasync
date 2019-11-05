@@ -5,7 +5,7 @@ import time
 # from PyQt5.QtWidgets import (
 from PySide2.QtWidgets import (
     QApplication, QProgressBar)
-from asyncqt import QEventLoop, QThreadExecutor
+from qasync import QEventLoop, QThreadExecutor
 
 
 app = QApplication(sys.argv)

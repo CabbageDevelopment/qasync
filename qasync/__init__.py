@@ -30,14 +30,22 @@ from queue import Queue
 
 logger = logging.getLogger(__name__)
 
-try:
-    QtModuleName = os.environ['QT_API']
-except KeyError:
-    QtModule = None
-else:
+QtModule = None
+
+# If QT_API env variable is given, use that or fail trying
+QtModuleName = os.getenv('QT_API', '').strip()
+if QtModuleName:
     logger.info('Forcing use of {} as Qt Implementation'.format(QtModuleName))
     QtModule = importlib.import_module(QtModuleName)
 
+# If a Qt lib is already imported, use that
+if not QtModule:
+    for QtModuleName in ('PyQt5', 'PySide2'):
+        if QtModuleName in sys.modules:
+            QtModule = sys.modules[QtModuleName]
+            break
+
+# Try importing qt libs
 if not QtModule:
     for QtModuleName in ('PyQt5', 'PySide2'):
         try:
@@ -46,8 +54,9 @@ if not QtModule:
             continue
         else:
             break
-    else:
-        raise ImportError('No Qt implementations found')
+
+if not QtModule:
+    raise ImportError('No Qt implementations found')
 
 logger.info('Using Qt Implementation: {}'.format(QtModuleName))
 
@@ -265,7 +274,7 @@ class _QEventLoop:
 
         assert self.__app is not None
         super().__init__()
-        
+
         if set_running_loop:
             asyncio.events._set_running_loop(self)
 

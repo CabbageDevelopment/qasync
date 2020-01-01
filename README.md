@@ -1,6 +1,6 @@
 # qasync
 
-![Maintenance](https://img.shields.io/maintenance/yes/2019)
+![Maintenance](https://img.shields.io/maintenance/yes/2020)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)
 ![PyPI - License](https://img.shields.io/pypi/l/qasync)
 ![PyPI](https://img.shields.io/pypi/v/qasync)
@@ -20,7 +20,7 @@
 To install `qasync`, use `pip`:
 
 ```
-pip install qasync --user
+pip install qasync
 ```
 
 ## License

@@ -15,8 +15,8 @@ setup(
     version=version,
     url='https://github.com/CabbageDevelopment/qasync',
     author=', '.join(('Sam McCormack',
-                      'Gerard Marull-Paretas'
-                      'Mark Harviston'
+                      'Gerard Marull-Paretas',
+                      'Mark Harviston',
                       'Arve Knudsen')),
     author_email=', '.join(('contact@cabbagedevelopment.com',
                             'gerard@teslabs.com',

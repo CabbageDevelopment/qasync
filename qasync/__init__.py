@@ -12,7 +12,7 @@ __author__ = ('Sam McCormack',
               'Gerard Marull-Paretas <gerard@teslabs.com>, '
               'Mark Harviston <mark.harviston@gmail.com>, '
               'Arve Knudsen <arve.knudsen@gmail.com>')
-__version__ = '0.9.3'
+__version__ = '0.9.4'
 __url__ = 'https://github.com/CabbageDevelopment/qasync'
 __license__ = 'BSD'
 __all__ = ['QEventLoop', 'QThreadExecutor', 'asyncSlot', 'asyncClose']

@@ -110,11 +110,11 @@ class _Selector(selectors.BaseSelector):
 
         if events & EVENT_READ:
             notifier = QtCore.QSocketNotifier(key.fd, QtCore.QSocketNotifier.Read)
-            notifier.activated.connect(self.__on_read_activated)
+            notifier.activated['int'].connect(self.__on_read_activated)
             self.__read_notifiers[key.fd] = notifier
         if events & EVENT_WRITE:
             notifier = QtCore.QSocketNotifier(key.fd, QtCore.QSocketNotifier.Write)
-            notifier.activated.connect(self.__on_write_activated)
+            notifier.activated['int'].connect(self.__on_write_activated)
             self.__write_notifiers[key.fd] = notifier
 
         return key
@@ -138,7 +138,7 @@ class _Selector(selectors.BaseSelector):
             except KeyError:
                 pass
             else:
-                notifier.activated.disconnect()
+                notifier.activated['int'].disconnect()
 
         try:
             key = self._fd_to_key.pop(self._fileobj_lookup(fileobj))

@@ -33,8 +33,22 @@ logger = logging.getLogger(__name__)
 QtModule = None
 
 # If QT_API env variable is given, use that or fail trying
-QtModuleName = os.getenv('QT_API', '').strip()
-if QtModuleName:
+qtapi_env = os.getenv('QT_API', '').strip().lower()
+if qtapi_env:
+    env_to_mod_map = {
+        "pyqt5" : "PyQt5",
+        "pyqt" : "PyQt4",
+        "pyqt4" : "PyQt4",
+        "pyside2" : "PySide2",
+        "pyside" : "PySide"
+    }
+    if qtapi_env in env_to_mod_map:
+        QtModuleName = env_to_mod_map[qtapi_env]
+    else:
+        raise ImportError("QT_API environment variable set ({}) but not one of [{}].".format(
+            qtapi_env,
+            ", ".join(env_to_mod_map.keys())))
+
     logger.info('Forcing use of {} as Qt Implementation'.format(QtModuleName))
     QtModule = importlib.import_module(QtModuleName)
 

@@ -257,7 +257,7 @@ class _QEventLoop:
     ...     loop.run_until_complete(xplusy(2, 2))
     """
 
-    def __init__(self, app=None, set_running_loop=True):
+    def __init__(self, app=None, set_running_loop=True, already_running=False):
         self.__app = app or QApplication.instance()
         assert self.__app is not None, 'No QApplication has been instantiated'
         self.__is_running = False
@@ -277,6 +277,11 @@ class _QEventLoop:
 
         if set_running_loop:
             asyncio.events._set_running_loop(self)
+
+        # We have to set __is_running to True after calling
+        # super().__init__() because of a bug in BaseEventLoop.
+        if already_running:
+            self.__is_running = True
 
     def run_forever(self):
         """Run eventloop forever."""

@@ -102,11 +102,13 @@ class _QThreadWorker(QtCore.QThread):
     For use by the QThreadExecutor
     """
 
-    def __init__(self, queue, num):
+    def __init__(self, queue, num, stackSize=None):
         self.__queue = queue
         self.__stop = False
         self.__num = num
         super().__init__()
+        if stackSize is not None:
+            self.setStackSize(stackSize)
 
     def run(self):
         queue = self.__queue
@@ -156,12 +158,20 @@ class QThreadExecutor:
     ...     assert r == 4
     """
 
-    def __init__(self, max_workers=10):
+    def __init__(self, max_workers=10, stack_size=None):
         super().__init__()
         self.__max_workers = max_workers
         self.__queue = Queue()
+        if stack_size is None:
+            # Match cpython/Python/thread_pthread.h
+            if sys.platform.startswith("darwin"):
+                stack_size = 16 * 2 ** 20
+            elif sys.platform.startswith("freebsd"):
+                stack_size = 4 * 2 ** 20
+            elif sys.platform.startswith("aix"):
+                stack_size = 2 * 2 ** 20
         self.__workers = [
-            _QThreadWorker(self.__queue, i + 1) for i in range(max_workers)
+            _QThreadWorker(self.__queue, i + 1, stack_size) for i in range(max_workers)
         ]
         self.__been_shutdown = False
 

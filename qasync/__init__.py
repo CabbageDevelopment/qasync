@@ -41,6 +41,7 @@ if qtapi_env:
         "pyqt5": "PyQt5",
         "pyqt": "PyQt4",
         "pyqt4": "PyQt4",
+        "pyside6": "PySide6",
         "pyside2": "PySide2",
         "pyside": "PySide",
     }
@@ -58,14 +59,14 @@ if qtapi_env:
 
 # If a Qt lib is already imported, use that
 if not QtModule:
-    for QtModuleName in ("PyQt5", "PySide2"):
+    for QtModuleName in ("PyQt5", "PySide2", "PySide6"):
         if QtModuleName in sys.modules:
             QtModule = sys.modules[QtModuleName]
             break
 
 # Try importing qt libs
 if not QtModule:
-    for QtModuleName in ("PyQt5", "PySide2"):
+    for QtModuleName in ("PyQt5", "PySide2", "PySide6"):
         try:
             QtModule = importlib.import_module(QtModuleName)
         except ImportError:
@@ -80,15 +81,20 @@ logger.info("Using Qt Implementation: {}".format(QtModuleName))
 
 QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
+
 if QtModuleName == "PyQt5":
     from PyQt5 import QtWidgets
     from PyQt5.QtCore import pyqtSlot as Slot
-
     QApplication = QtWidgets.QApplication
+    
 elif QtModuleName == "PySide2":
     from PySide2 import QtWidgets
     from PySide2.QtCore import Slot
-
+    QApplication = QtWidgets.QApplication
+    
+elif QtModuleName == "PySide6":
+    from PySide6 import QtWidgets
+    from PySide6.QtCore import Slot
     QApplication = QtWidgets.QApplication
 
 from ._common import with_logger  # noqa

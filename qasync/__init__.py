@@ -14,7 +14,7 @@ __author__ = (
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
 )
-__version__ = "0.12.0"
+__version__ = "0.13.0"
 __url__ = "https://github.com/CabbageDevelopment/qasync"
 __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
@@ -85,16 +85,19 @@ QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 if QtModuleName == "PyQt5":
     from PyQt5 import QtWidgets
     from PyQt5.QtCore import pyqtSlot as Slot
+
     QApplication = QtWidgets.QApplication
-    
+
 elif QtModuleName == "PySide2":
     from PySide2 import QtWidgets
     from PySide2.QtCore import Slot
+
     QApplication = QtWidgets.QApplication
-    
+
 elif QtModuleName == "PySide6":
     from PySide6 import QtWidgets
     from PySide6.QtCore import Slot
+
     QApplication = QtWidgets.QApplication
 
 from ._common import with_logger  # noqa

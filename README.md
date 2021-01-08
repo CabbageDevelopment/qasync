@@ -13,9 +13,9 @@
 
 #### The future of `qasync`
 
-`qasync` was created because `asyncqt` and `quamash` were no longer maintained. However, as of 28th February 2020, `asyncqt` appears to be active once more. 
+`qasync` was created because `asyncqt` and `quamash` are no longer maintained.
 
-**`qasync` will continue to be maintained, and will still be accepting pull requests.** Improvements to `asyncqt` will be pulled downstream, and improvements to `qasync` will be sent upstream.
+**`qasync` will continue to be maintained, and will still be accepting pull requests.**
 
 ## Requirements
 

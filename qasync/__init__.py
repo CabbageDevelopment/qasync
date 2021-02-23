@@ -20,6 +20,7 @@ __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
 
 import asyncio
+import contextlib
 import functools
 import importlib
 import itertools
@@ -726,3 +727,30 @@ def asyncSlot(*args):
         return wrapper
 
     return outer_decorator
+
+
+class QEventLoopPolicyMixin:
+    def new_event_loop(self):
+        return QEventLoop(QApplication(sys.argv))
+
+
+class DefaultQEventLoopPolicy(
+    QEventLoopPolicyMixin,
+    asyncio.DefaultEventLoopPolicy,
+):
+    pass
+
+
+@contextlib.contextmanager
+def _set_event_loop_policy(policy):
+    old_policy = asyncio.get_event_loop_policy()
+    asyncio.set_event_loop_policy(policy)
+    try:
+        yield
+    finally:
+        asyncio.set_event_loop_policy(old_policy)
+
+
+def run(*args, **kwargs):
+    with _set_event_loop_policy(DefaultQEventLoopPolicy()):
+        return asyncio.run(*args, **kwargs)

@@ -2,11 +2,11 @@ import sys
 import asyncio
 
 import aiohttp
-from qasync import QEventLoop, asyncSlot, asyncClose
+from qasync import run, asyncSlot, asyncClose
 
 # from PyQt5.QtWidgets import (
 from PySide2.QtWidgets import (
-    QApplication, QWidget, QLabel, QLineEdit, QTextEdit, QPushButton,
+    QWidget, QLabel, QLineEdit, QTextEdit, QPushButton,
     QVBoxLayout)
 
 
@@ -61,13 +61,12 @@ class MainWindow(QWidget):
             self.btnFetch.setEnabled(True)
 
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    loop = QEventLoop(app)
-    asyncio.set_event_loop(loop)
-
+async def main():
+    loop = asyncio.get_running_loop()
     mainWindow = MainWindow()
     mainWindow.show()
+    await loop.create_future()
 
-    with loop:
-        sys.exit(loop.run_forever())
+
+if __name__ == "__main__":
+    qasync.run(main())

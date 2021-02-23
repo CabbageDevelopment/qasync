@@ -532,9 +532,8 @@ class _QEventLoop:
     def __on_notifier_ready(self, notifiers, notifier, fd, callback, args):
         if fd not in notifiers:
             self._logger.warning(
-                "Socket notifier for fd {} is ready, even though it should be disabled, not calling {} and disabling".format(
-                    fd, callback
-                ),
+                f"Socket notifier for fd {fd} is ready, even though it should "
+                f"be disabled, not calling {callback} and disabling"
             )
             notifier.setEnabled(False)
             return

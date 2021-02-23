@@ -19,5 +19,5 @@ install:
 
 script:
   - pipenv run flake8 qasync
-  - QT_API=PyQt5 pipenv run py.test -v --cov=qasync
-  - QT_API=PySide2 pipenv run py.test -v --cov=qasync
+  - QT_API=PyQt5 pipenv run py.test --forked -v --cov=qasync
+  - QT_API=PySide2 pipenv run py.test --forked -v --cov=qasync

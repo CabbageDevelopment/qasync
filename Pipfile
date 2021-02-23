@@ -10,5 +10,6 @@ asyncqt = {editable = true, path = "."}
 "pathlib2" = "*"
 pytest-cov = "*"
 codecov = "*"
+pytest-forked = "*"
 
 [packages]

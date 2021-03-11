@@ -297,6 +297,10 @@ class _QEventLoop:
     >>> asyncio.set_event_loop(loop)
     >>> with loop:
     ...     loop.run_until_complete(xplusy(2, 2))
+    
+    If the event loop shall be used with an existing and already running QApplication
+    it must be specified in the constructor via already_running=True
+    In this case the user is responsible for loop cleanup with stop() and close()
     """
 
     def __init__(self, app=None, set_running_loop=True, already_running=False):
@@ -324,9 +328,18 @@ class _QEventLoop:
         # super().__init__() because of a bug in BaseEventLoop.
         if already_running:
             self.__is_running = True
+            
+            # it must be ensured that all pre- and 
+            # postprocessing for the eventloop is done
+            self._before_run_forever()
+            self.__app.aboutToQuit.connect(self._after_run_forever)
 
     def run_forever(self):
         """Run eventloop forever."""
+        
+        if self.__is_running:
+            raise RuntimeError("Event loop already running")
+        
         self.__is_running = True
         self._before_run_forever()
 
@@ -341,6 +354,10 @@ class _QEventLoop:
 
     def run_until_complete(self, future):
         """Run until Future is complete."""
+        
+        if self.__is_running:
+            raise RuntimeError("Event loop already running")
+        
         self._logger.debug("Running {} until complete".format(future))
         future = asyncio.ensure_future(future, loop=self)
 

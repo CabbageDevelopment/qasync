@@ -35,13 +35,13 @@ def loop(request, application):
 
         for exc in additional_exceptions:
             if (
-                os.name == 'nt' and
-                isinstance(exc['exception'], WindowsError) and
-                exc['exception'].winerror == 6
+                os.name == "nt"
+                and isinstance(exc["exception"], WindowsError)
+                and exc["exception"].winerror == 6
             ):
                 # ignore Invalid Handle Errors
                 continue
-            raise exc['exception']
+            raise exc["exception"]
 
     def except_handler(loop, ctx):
         additional_exceptions.append(ctx)
@@ -71,11 +71,12 @@ def executor(request):
     return exc
 
 
-ExceptionTester = type('ExceptionTester', (Exception,), {})  # to make flake8 not complain
+ExceptionTester = type(
+    "ExceptionTester", (Exception,), {}
+)  # to make flake8 not complain
 
 
 class TestCanRunTasksInExecutor:
-
     """
     Test Cases Concerning running jobs in Executors.
 
@@ -86,110 +87,129 @@ class TestCanRunTasksInExecutor:
 
     def test_can_run_tasks_in_executor(self, loop, executor):
         """Verify that tasks can be run in an executor."""
-        logging.debug('Loop: {!r}'.format(loop))
-        logging.debug('Executor: {!r}'.format(executor))
+        logging.debug("Loop: {!r}".format(loop))
+        logging.debug("Executor: {!r}".format(executor))
 
         manager = multiprocessing.Manager()
         was_invoked = manager.Value(ctypes.c_int, 0)
-        logging.debug('running until complete')
+        logging.debug("running until complete")
         loop.run_until_complete(self.blocking_task(loop, executor, was_invoked))
-        logging.debug('ran')
+        logging.debug("ran")
 
         assert was_invoked.value == 1
 
     def test_can_handle_exception_in_executor(self, loop, executor):
         with pytest.raises(ExceptionTester) as excinfo:
-            loop.run_until_complete(asyncio.wait_for(
-                loop.run_in_executor(executor, self.blocking_failure),
-                timeout=3.0,
-            ))
+            loop.run_until_complete(
+                asyncio.wait_for(
+                    loop.run_in_executor(executor, self.blocking_failure),
+                    timeout=3.0,
+                )
+            )
 
-        assert str(excinfo.value) == 'Testing'
+        assert str(excinfo.value) == "Testing"
 
     def blocking_failure(self):
-        logging.debug('raising')
+        logging.debug("raising")
         try:
-            raise ExceptionTester('Testing')
+            raise ExceptionTester("Testing")
         finally:
-            logging.debug('raised!')
+            logging.debug("raised!")
 
     def blocking_func(self, was_invoked):
-        logging.debug('start blocking_func()')
+        logging.debug("start blocking_func()")
         was_invoked.value = 1
-        logging.debug('end blocking_func()')
+        logging.debug("end blocking_func()")
 
-    @asyncio.coroutine
-    def blocking_task(self, loop, executor, was_invoked):
-        logging.debug('start blocking task()')
+    async def blocking_task(self, loop, executor, was_invoked):
+        logging.debug("start blocking task()")
         fut = loop.run_in_executor(executor, self.blocking_func, was_invoked)
-        yield from asyncio.wait_for(fut, timeout=5.0)
-        logging.debug('start blocking task()')
+        await asyncio.wait_for(fut, timeout=5.0)
+        logging.debug("start blocking task()")
 
 
 def test_can_execute_subprocess(loop):
     """Verify that a subprocess can be executed."""
-    @asyncio.coroutine
-    def mycoro():
-        process = yield from asyncio.create_subprocess_exec(
-            sys.executable or 'python', '-c', 'import sys; sys.exit(5)')
-        yield from process.wait()
+
+    async def mycoro():
+        process = await asyncio.create_subprocess_exec(
+            sys.executable or "python", "-c", "import sys; sys.exit(5)"
+        )
+        await process.wait()
         assert process.returncode == 5
+
     loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
 
 
 def test_can_read_subprocess(loop):
     """Verify that a subprocess's data can be read from stdout."""
-    @asyncio.coroutine
-    def mycoro():
-        process = yield from asyncio.create_subprocess_exec(
-            sys.executable or 'python', '-c', 'print("Hello async world!")', stdout=subprocess.PIPE)
-        received_stdout = yield from process.stdout.readexactly(len(b'Hello async world!\n'))
-        yield from process.wait()
+
+    async def mycoro():
+        process = await asyncio.create_subprocess_exec(
+            sys.executable or "python",
+            "-c",
+            'print("Hello async world!")',
+            stdout=subprocess.PIPE,
+        )
+        received_stdout = await process.stdout.readexactly(len(b"Hello async world!\n"))
+        await process.wait()
         assert process.returncode == 0
-        assert received_stdout.strip() == b'Hello async world!'
+        assert received_stdout.strip() == b"Hello async world!"
 
     loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
 
 
 def test_can_communicate_subprocess(loop):
     """Verify that a subprocess's data can be passed in/out via stdin/stdout."""
-    @asyncio.coroutine
-    def mycoro():
-        process = yield from asyncio.create_subprocess_exec(
-            sys.executable or 'python', '-c', 'print(input())', stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        received_stdout, received_stderr = yield from process.communicate(b'Hello async world!\n')
-        yield from process.wait()
+
+    async def mycoro():
+        process = await asyncio.create_subprocess_exec(
+            sys.executable or "python",
+            "-c",
+            "print(input())",
+            stdout=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+        )
+        received_stdout, received_stderr = await process.communicate(
+            b"Hello async world!\n"
+        )
+        await process.wait()
         assert process.returncode == 0
-        assert received_stdout.strip() == b'Hello async world!'
+        assert received_stdout.strip() == b"Hello async world!"
+
     loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
 
 
 def test_can_terminate_subprocess(loop):
     """Verify that a subprocess can be terminated."""
+
     # Start a never-ending process
-    @asyncio.coroutine
-    def mycoro():
-        process = yield from asyncio.create_subprocess_exec(
-            sys.executable or 'python', '-c', 'import time\nwhile True: time.sleep(1)')
+    async def mycoro():
+        process = await asyncio.create_subprocess_exec(
+            sys.executable or "python", "-c", "import time\nwhile True: time.sleep(1)"
+        )
         process.terminate()
-        yield from process.wait()
+        await process.wait()
         assert process.returncode != 0
+
     loop.run_until_complete(mycoro())
 
 
 @pytest.mark.raises(ExceptionTester)
 def test_loop_callback_exceptions_bubble_up(loop):
     """Verify that test exceptions raised in event loop callbacks bubble up."""
+
     def raise_test_exception():
         raise ExceptionTester("Test Message")
+
     loop.call_soon(raise_test_exception)
-    loop.run_until_complete(asyncio.sleep(.1))
+    loop.run_until_complete(asyncio.sleep(0.1))
 
 
 def test_loop_running(loop):
     """Verify that loop.is_running returns True when running."""
-    @asyncio.coroutine
-    def is_running():
+
+    async def is_running():
         nonlocal loop
         assert loop.is_running()
 
@@ -211,7 +231,7 @@ def test_can_function_as_context_manager(application):
 
 def test_future_not_done_on_loop_shutdown(loop):
     """Verify RuntimError occurs when loop stopped before Future completed with run_until_complete."""
-    loop.call_later(.1, loop.stop)
+    loop.call_later(0.1, loop.stop)
     fut = asyncio.Future()
     with pytest.raises(RuntimeError):
         loop.run_until_complete(fut)
@@ -219,7 +239,9 @@ def test_future_not_done_on_loop_shutdown(loop):
 
 def test_call_later_must_not_coroutine(loop):
     """Verify TypeError occurs call_later is given a coroutine."""
-    mycoro = asyncio.coroutine(lambda: None)
+
+    async def mycoro():
+        pass
 
     with pytest.raises(TypeError):
         loop.call_soon(mycoro)
@@ -234,13 +256,15 @@ def test_call_later_must_be_callable(loop):
 
 def test_call_at(loop):
     """Verify that loop.call_at works as expected."""
+
     def mycallback():
         nonlocal was_invoked
         was_invoked = True
+
     was_invoked = False
 
-    loop.call_at(loop.time() + .05, mycallback)
-    loop.run_until_complete(asyncio.sleep(.1))
+    loop.call_at(loop.time() + 0.05, mycallback)
+    loop.run_until_complete(asyncio.sleep(0.1))
 
     assert was_invoked
 
@@ -259,6 +283,7 @@ def sock_pair(request):
 
     If socket.socketpair isn't available, we emulate it.
     """
+
     def fin():
         if client_sock is not None:
             client_sock.close()
@@ -269,7 +294,7 @@ def sock_pair(request):
     request.addfinalizer(fin)
 
     # See if socketpair() is available.
-    have_socketpair = hasattr(socket, 'socketpair')
+    have_socketpair = hasattr(socket, "socketpair")
     if have_socketpair:
         client_sock, srv_sock = socket.socketpair()
         return client_sock, srv_sock
@@ -277,7 +302,7 @@ def sock_pair(request):
     # Create a non-blocking temporary server socket
     temp_srv_sock = socket.socket()
     temp_srv_sock.setblocking(False)
-    temp_srv_sock.bind(('', 0))
+    temp_srv_sock.bind(("", 0))
     port = temp_srv_sock.getsockname()[1]
     temp_srv_sock.listen(1)
 
@@ -285,7 +310,7 @@ def sock_pair(request):
     client_sock = socket.socket()
     client_sock.setblocking(False)
     try:
-        client_sock.connect(('localhost', port))
+        client_sock.connect(("localhost", port))
     except socket.error as err:
         # Error 10035 (operation would block) is not an error, as we're doing this with a
         # non-blocking socket.
@@ -294,10 +319,11 @@ def sock_pair(request):
 
     # Use select to wait for connect() to succeed.
     import select
+
     timeout = 1
     readable = select.select([temp_srv_sock], [], [], timeout)[0]
     if temp_srv_sock not in readable:
-        raise Exception('Client socket not connected in {} second(s)'.format(timeout))
+        raise Exception("Client socket not connected in {} second(s)".format(timeout))
     srv_sock, _ = temp_srv_sock.accept()
 
     return client_sock, srv_sock
@@ -305,6 +331,7 @@ def sock_pair(request):
 
 def test_can_add_reader(loop, sock_pair):
     """Verify that we can add a reader callback to an event loop."""
+
     def can_read():
         if fut.done():
             return
@@ -323,7 +350,7 @@ def test_can_add_reader(loop, sock_pair):
         client_sock.send(ref_msg)
         client_sock.close()
 
-    ref_msg = b'a'
+    ref_msg = b"a"
     client_sock, srv_sock = sock_pair
     loop.call_soon(write)
 
@@ -331,7 +358,7 @@ def test_can_add_reader(loop, sock_pair):
     got_msg = None
     fut = asyncio.Future()
     loop.add_reader(srv_sock.fileno(), can_read)
-    assert len(loop._read_notifiers) == exp_num_notifiers, 'Notifier should be added'
+    assert len(loop._read_notifiers) == exp_num_notifiers, "Notifier should be added"
     loop.run_until_complete(asyncio.wait_for(fut, timeout=1.0))
 
     assert got_msg == ref_msg
@@ -339,6 +366,7 @@ def test_can_add_reader(loop, sock_pair):
 
 def test_can_remove_reader(loop, sock_pair):
     """Verify that we can remove a reader callback from an event loop."""
+
     def can_read():
         data = srv_sock.recv(1)
         if len(data) != 1:
@@ -353,14 +381,14 @@ def test_can_remove_reader(loop, sock_pair):
     loop.add_reader(srv_sock.fileno(), can_read)
     exp_num_notifiers = len(loop._read_notifiers) - 1
     loop.remove_reader(srv_sock.fileno())
-    assert len(loop._read_notifiers) == exp_num_notifiers, 'Notifier should be removed'
-    client_sock.send(b'a')
+    assert len(loop._read_notifiers) == exp_num_notifiers, "Notifier should be removed"
+    client_sock.send(b"a")
     client_sock.close()
     # Run for a short while to see if we get a read notification
     loop.call_later(0.1, loop.stop)
     loop.run_forever()
 
-    assert got_msg is None, 'Should not have received a read notification'
+    assert got_msg is None, "Should not have received a read notification"
 
 
 def test_remove_reader_after_closing(loop, sock_pair):
@@ -401,6 +429,7 @@ def test_add_writer_after_closing(loop, sock_pair):
 
 def test_can_add_writer(loop, sock_pair):
     """Verify that we can add a writer callback to an event loop."""
+
     def can_write():
         if not fut.done():
             # Indicate that we're done
@@ -410,7 +439,7 @@ def test_can_add_writer(loop, sock_pair):
     client_sock, _ = sock_pair
     fut = asyncio.Future()
     loop.add_writer(client_sock.fileno(), can_write)
-    assert len(loop._write_notifiers) == 1, 'Notifier should be added'
+    assert len(loop._write_notifiers) == 1, "Notifier should be added"
     loop.run_until_complete(asyncio.wait_for(fut, timeout=1.0))
 
 
@@ -419,11 +448,12 @@ def test_can_remove_writer(loop, sock_pair):
     client_sock, _ = sock_pair
     loop.add_writer(client_sock.fileno(), lambda: None)
     loop.remove_writer(client_sock.fileno())
-    assert not loop._write_notifiers, 'Notifier should be removed'
+    assert not loop._write_notifiers, "Notifier should be removed"
 
 
 def test_add_reader_should_disable_qsocket_notifier_on_callback(loop, sock_pair):
     """Verify that add_reader disables QSocketNotifier during callback."""
+
     def can_read():
         nonlocal num_calls
         num_calls += 1
@@ -440,7 +470,7 @@ def test_add_reader_should_disable_qsocket_notifier_on_callback(loop, sock_pair)
         assert not notifier.isEnabled()
 
     def write():
-        client_sock.send(b'a')
+        client_sock.send(b"a")
         client_sock.close()
 
     num_calls = 0
@@ -455,6 +485,7 @@ def test_add_reader_should_disable_qsocket_notifier_on_callback(loop, sock_pair)
 
 def test_add_writer_should_disable_qsocket_notifier_on_callback(loop, sock_pair):
     """Verify that add_writer disables QSocketNotifier during callback."""
+
     def can_write():
         nonlocal num_calls
         num_calls += 1
@@ -481,15 +512,14 @@ def test_reader_writer_echo(loop, sock_pair):
     """Verify readers and writers can send data to each other."""
     c_sock, s_sock = sock_pair
 
-    @asyncio.coroutine
-    def mycoro():
-        c_reader, c_writer = yield from asyncio.open_connection(sock=c_sock)
-        s_reader, s_writer = yield from asyncio.open_connection(sock=s_sock)
+    async def mycoro():
+        c_reader, c_writer = await asyncio.open_connection(sock=c_sock)
+        s_reader, s_writer = await asyncio.open_connection(sock=s_sock)
 
-        data = b'Echo... Echo... Echo...'
+        data = b"Echo... Echo... Echo..."
         s_writer.write(data)
-        yield from s_writer.drain()
-        read_data = yield from c_reader.readexactly(len(data))
+        await s_writer.drain()
+        read_data = await c_reader.readexactly(len(data))
         assert data == read_data
         s_writer.close()
 
@@ -501,22 +531,20 @@ def test_regression_bug13(loop, sock_pair):
     c_sock, s_sock = sock_pair
     client_done, server_done = asyncio.Future(), asyncio.Future()
 
-    @asyncio.coroutine
-    def server_coro():
-        s_reader, s_writer = yield from asyncio.open_connection(sock=s_sock)
+    async def server_coro():
+        s_reader, s_writer = await asyncio.open_connection(sock=s_sock)
 
-        s_writer.write(b'1')
-        yield from s_writer.drain()
-        assert (yield from s_reader.readexactly(1)) == b'2'
-        s_writer.write(b'3')
-        yield from s_writer.drain()
+        s_writer.write(b"1")
+        await s_writer.drain()
+        assert (await s_reader.readexactly(1)) == b"2"
+        s_writer.write(b"3")
+        await s_writer.drain()
         server_done.set_result(True)
 
     result1 = None
     result3 = None
 
-    @asyncio.coroutine
-    def client_coro():
+    async def client_coro():
         def cb1():
             nonlocal result1
             assert result1 is None
@@ -527,7 +555,7 @@ def test_regression_bug13(loop, sock_pair):
         def cb2():
             nonlocal result3
             assert result3 is None
-            c_sock.send(b'2')
+            c_sock.send(b"2")
             loop.remove_writer(c_sock.fileno())
             loop.add_reader(c_sock.fileno(), cb3)
 
@@ -544,8 +572,8 @@ def test_regression_bug13(loop, sock_pair):
 
     both_done = asyncio.gather(client_done, server_done)
     loop.run_until_complete(asyncio.wait_for(both_done, timeout=1.0))
-    assert result1 == b'1'
-    assert result3 == b'3'
+    assert result1 == b"1"
+    assert result3 == b"3"
 
 
 def test_add_reader_replace(loop, sock_pair):
@@ -572,27 +600,24 @@ def test_add_reader_replace(loop, sock_pair):
         called2 = True
         any_callback()
 
-    @asyncio.coroutine
-    def server_coro():
-        s_reader, s_writer = yield from asyncio.open_connection(
-            sock=s_sock)
+    async def server_coro():
+        s_reader, s_writer = await asyncio.open_connection(sock=s_sock)
         s_writer.write(b"foo")
-        yield from s_writer.drain()
+        await s_writer.drain()
 
-    @asyncio.coroutine
-    def client_coro():
+    async def client_coro():
         loop.add_reader(c_sock.fileno(), callback1)
         loop.add_reader(c_sock.fileno(), callback2)
-        yield from callback_invoked
+        await callback_invoked
         loop.remove_reader(c_sock.fileno())
-        assert (yield from loop.sock_recv(c_sock, 3)) == b"foo"
+        assert (await loop.sock_recv(c_sock, 3)) == b"foo"
 
     client_done = asyncio.ensure_future(client_coro())
     server_done = asyncio.ensure_future(server_coro())
 
     both_done = asyncio.wait(
-        [server_done, client_done],
-        return_when=asyncio.FIRST_EXCEPTION)
+        [server_done, client_done], return_when=asyncio.FIRST_EXCEPTION
+    )
     loop.run_until_complete(asyncio.wait_for(both_done, timeout=0.1))
     assert not called1
     assert called2
@@ -622,11 +647,10 @@ def test_add_writer_replace(loop, sock_pair):
         called2 = True
         any_callback()
 
-    @asyncio.coroutine
-    def client_coro():
+    async def client_coro():
         loop.add_writer(c_sock.fileno(), callback1)
         loop.add_writer(c_sock.fileno(), callback2)
-        yield from callback_invoked
+        await callback_invoked
         loop.remove_writer(c_sock.fileno())
 
     loop.run_until_complete(asyncio.wait_for(client_coro(), timeout=0.1))
@@ -687,7 +711,7 @@ def test_scheduling(loop, sock_pair):
 
 
 @pytest.mark.xfail(
-    'sys.version_info < (3,4)',
+    "sys.version_info < (3,4)",
     reason="Doesn't work on python older than 3.4",
 )
 def test_exception_handler(loop):
@@ -695,8 +719,7 @@ def test_exception_handler(loop):
     coro_run = False
     loop.set_debug(True)
 
-    @asyncio.coroutine
-    def future_except():
+    async def future_except():
         nonlocal coro_run
         coro_run = True
         loop.stop()
@@ -732,12 +755,12 @@ def test_exception_handler_simple(loop):
 
 
 def test_not_running_immediately_after_stopped(loop):
-    @asyncio.coroutine
-    def mycoro():
+    async def mycoro():
         assert loop.is_running()
-        yield from asyncio.sleep(0)
+        await asyncio.sleep(0)
         loop.stop()
         assert not loop.is_running()
+
     assert not loop.is_running()
     loop.run_until_complete(mycoro())
     assert not loop.is_running()

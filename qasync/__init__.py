@@ -20,6 +20,7 @@ __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
 
 import asyncio
+import contextlib
 import functools
 import importlib
 import itertools
@@ -532,9 +533,8 @@ class _QEventLoop:
     def __on_notifier_ready(self, notifiers, notifier, fd, callback, args):
         if fd not in notifiers:
             self._logger.warning(
-                "Socket notifier for fd {} is ready, even though it should be disabled, not calling {} and disabling".format(
-                    fd, callback
-                ),
+                f"Socket notifier for fd {fd} is ready, even though it should "
+                f"be disabled, not calling {callback} and disabling"
             )
             notifier.setEnabled(False)
             return
@@ -727,3 +727,30 @@ def asyncSlot(*args):
         return wrapper
 
     return outer_decorator
+
+
+class QEventLoopPolicyMixin:
+    def new_event_loop(self):
+        return QEventLoop(QApplication(sys.argv))
+
+
+class DefaultQEventLoopPolicy(
+    QEventLoopPolicyMixin,
+    asyncio.DefaultEventLoopPolicy,
+):
+    pass
+
+
+@contextlib.contextmanager
+def _set_event_loop_policy(policy):
+    old_policy = asyncio.get_event_loop_policy()
+    asyncio.set_event_loop_policy(policy)
+    try:
+        yield
+    finally:
+        asyncio.set_event_loop_policy(old_policy)
+
+
+def run(*args, **kwargs):
+    with _set_event_loop_policy(DefaultQEventLoopPolicy()):
+        return asyncio.run(*args, **kwargs)

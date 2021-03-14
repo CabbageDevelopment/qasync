@@ -18,5 +18,5 @@ install:
   - pipenv run pip install PyQt5 PySide2
 
 script:
-  - QT_API=PyQt5 pipenv run py.test -v 
-  - QT_API=PySide2 pipenv run py.test -v 
+  - QT_API=PyQt5 pipenv run py.test --forked -v
+  - QT_API=PySide2 pipenv run py.test --forked -v

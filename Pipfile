@@ -4,11 +4,8 @@ name = "pypi"
 verify_ssl = true
 
 [dev-packages]
-"flake8" = "*"
 pytest = "*"
-asyncqt = {editable = true, path = "."}
+qasync = {editable = true, path = "."}
 "pathlib2" = "*"
-pytest-cov = "*"
-codecov = "*"
 
 [packages]

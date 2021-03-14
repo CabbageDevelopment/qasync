@@ -9,16 +9,18 @@ from pytest import fixture
 
 
 logging.basicConfig(
-    level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+)
 
 
-if os.name == 'nt':
-    collect_ignore = ['quamash/_unix.py']
+if os.name == "nt":
+    collect_ignore = ["qasync/_unix.py"]
 else:
-    collect_ignore = ['quamash/_windows.py']
+    collect_ignore = ["qasync/_windows.py"]
 
 
-@fixture(scope='session')
+@fixture(scope="session")
 def application():
     from qasync import QApplication
+
     return QApplication([])

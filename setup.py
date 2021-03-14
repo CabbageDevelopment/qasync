@@ -17,14 +17,6 @@ setup(
     author=", ".join(
         ("Sam McCormack", "Gerard Marull-Paretas", "Mark Harviston", "Arve Knudsen")
     ),
-    author_email=", ".join(
-        (
-            "contact@cabbagedevelopment.com",
-            "gerard@teslabs.com",
-            "mark.harviston@gmail.com",
-            "arve.knudsen@gmail.com",
-        )
-    ),
     packages=["qasync"],
     python_requires="~=3.6",
     license="BSD",

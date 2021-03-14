@@ -5,7 +5,11 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-qasync = {editable = true, path = "."}
-"pathlib2" = "*"
+pathlib2 = "*"
+atomicwrites = "*"
 
 [packages]
+
+[dev-packages.qasync]
+editable = true
+path = "."

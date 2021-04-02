@@ -1,4 +1,6 @@
 import asyncio
+import functools
+import sys
 
 import aiohttp
 
@@ -13,7 +15,7 @@ from PySide2.QtWidgets import (
 )
 
 import qasync
-from qasync import asyncSlot, asyncClose
+from qasync import asyncSlot, asyncClose, QApplication
 
 
 class MainWindow(QWidget):
@@ -69,11 +71,28 @@ class MainWindow(QWidget):
 
 
 async def main():
-    loop = asyncio.get_running_loop()
+    def close_future(future, loop):
+        loop.call_later(10, future.cancel)
+        future.cancel("Close Application")
+
+    loop = asyncio.get_event_loop()
+    future = asyncio.Future()
+
+    app = QApplication.instance()
+    if hasattr(app, 'aboutToQuit'):
+        getattr(app, 'aboutToQuit')\
+            .connect(functools.partial(close_future, future, loop))
+
     mainWindow = MainWindow()
     mainWindow.show()
-    await loop.create_future()
+
+    await future
+
+    return True
 
 
 if __name__ == "__main__":
-    qasync.run(main())
+    try:
+        qasync.run(main())
+    except asyncio.exceptions.CancelledError:
+        sys.exit(0)

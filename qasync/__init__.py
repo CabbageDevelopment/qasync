@@ -735,11 +735,19 @@ def asyncClose(fn):
 def asyncSlot(*args):
     """Make a Qt async slot run on asyncio loop."""
 
+    def _error_handler(task):
+        try:
+            task.result()
+        except Exception:
+            sys.excepthook(*sys.exc_info())
+
     def outer_decorator(fn):
         @Slot(*args)
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
-            return asyncio.ensure_future(fn(*args, **kwargs))
+            task = asyncio.ensure_future(fn(*args, **kwargs))
+            task.add_done_callback(_error_handler)
+            return task
 
         return wrapper
 

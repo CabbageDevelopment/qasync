@@ -130,27 +130,26 @@ class _QThreadWorker(QtCore.QThread):
 
             future, callback, args, kwargs = command
             self._logger.debug(
-                "#{} got callback {} with args {} and kwargs {} from queue".format(
+                "#%s got callback %s with args %s and kwargs %s from queue",
                     self.__num, callback, args, kwargs
-                ),
             )
             if future.set_running_or_notify_cancel():
                 self._logger.debug("Invoking callback")
                 try:
                     r = callback(*args, **kwargs)
                 except Exception as err:
-                    self._logger.debug("Setting Future exception: {}".format(err))
+                    self._logger.debug("Setting Future exception: %s", err)
                     future.set_exception(err)
                 else:
-                    self._logger.debug("Setting Future result: {}".format(r))
+                    self._logger.debug("Setting Future result: %s", r)
                     future.set_result(r)
             else:
                 self._logger.debug("Future was canceled")
 
-        self._logger.debug("Thread #{} stopped".format(self.__num))
+        self._logger.debug("Thread #%s stopped", self.__num)
 
     def wait(self):
-        self._logger.debug("Waiting for thread #{} to stop...".format(self.__num))
+        self._logger.debug("Waiting for thread #%s to stop...", self.__num)
         super().wait()
 
 
@@ -194,9 +193,8 @@ class QThreadExecutor:
 
         future = Future()
         self._logger.debug(
-            "Submitting callback {} with args {} and kwargs {} to thread worker queue".format(
-                callback, args, kwargs
-            )
+            "Submitting callback %s with args %s and kwargs %s to thread worker queue",
+            callback, args, kwargs
         )
         self.__queue.put((future, callback, args, kwargs))
         return future
@@ -243,32 +241,33 @@ class _SimpleTimer(QtCore.QObject):
         super().__init__()
         self.__callbacks = {}
         self._stopped = False
+        self.__debug_enabled = False
 
     def add_callback(self, handle, delay=0):
         timerid = self.startTimer(int(delay * 1000))
-        self._logger.debug("Registering timer id {0}".format(timerid))
+        self.__log_debug("Registering timer id %s", timerid)
         assert timerid not in self.__callbacks
         self.__callbacks[timerid] = handle
         return handle
 
     def timerEvent(self, event):  # noqa: N802
         timerid = event.timerId()
-        self._logger.debug("Timer event on id {0}".format(timerid))
+        self.__log_debug("Timer event on id %s", timerid)
         if self._stopped:
-            self._logger.debug("Timer stopped, killing {}".format(timerid))
+            self.__log_debug("Timer stopped, killing %s", timerid)
             self.killTimer(timerid)
             del self.__callbacks[timerid]
         else:
             try:
                 handle = self.__callbacks[timerid]
             except KeyError as e:
-                self._logger.debug(str(e))
+                self.__log_debug(e)
                 pass
             else:
                 if handle._cancelled:
-                    self._logger.debug("Handle {} cancelled".format(handle))
+                    self.__log_debug("Handle %s cancelled", handle)
                 else:
-                    self._logger.debug("Calling handle {}".format(handle))
+                    self.__log_debug("Calling handle %s", handle)
                     handle._run()
             finally:
                 del self.__callbacks[timerid]
@@ -276,9 +275,15 @@ class _SimpleTimer(QtCore.QObject):
             self.killTimer(timerid)
 
     def stop(self):
-        self._logger.debug("Stopping timers")
+        self.__log_debug("Stopping timers")
         self._stopped = True
 
+    def set_debug(self, enabled):
+        self.__debug_enabled = enabled
+
+    def __log_debug(self, *args, **kwargs):
+        if self.__debug_enabled:
+            self._logger.debug(*args, **kwargs)
 
 @with_logger
 class _QEventLoop:
@@ -345,9 +350,9 @@ class _QEventLoop:
         self._before_run_forever()
 
         try:
-            self._logger.debug("Starting Qt event loop")
+            self.__log_debug("Starting Qt event loop")
             rslt = self.__app.exec_()
-            self._logger.debug("Qt event loop ended with result {}".format(rslt))
+            self.__log_debug("Qt event loop ended with result %s", rslt)
             return rslt
         finally:
             self._after_run_forever()
@@ -359,7 +364,7 @@ class _QEventLoop:
         if self.__is_running:
             raise RuntimeError("Event loop already running")
 
-        self._logger.debug("Running {} until complete".format(future))
+        self.__log_debug("Running %s until complete", future)
         future = asyncio.ensure_future(future, loop=self)
 
         def stop(*args):
@@ -374,19 +379,19 @@ class _QEventLoop:
         if not future.done():
             raise RuntimeError("Event loop stopped before Future completed.")
 
-        self._logger.debug("Future {} finished running".format(future))
+        self.__log_debug("Future %s finished running", future)
         return future.result()
 
     def stop(self):
         """Stop event loop."""
         if not self.__is_running:
-            self._logger.debug("Already stopped")
+            self.__log_debug("Already stopped")
             return
 
-        self._logger.debug("Stopping event loop...")
+        self.__log_debug("Stopping event loop...")
         self.__is_running = False
         self.__app.exit()
-        self._logger.debug("Stopped event loop")
+        self.__log_debug("Stopped event loop")
 
     def is_running(self):
         """Return True if the event loop is running, False otherwise."""
@@ -403,7 +408,7 @@ class _QEventLoop:
         if self.is_closed():
             return
 
-        self._logger.debug("Closing event loop...")
+        self.__log_debug("Closing event loop...")
         if self.__default_executor is not None:
             self.__default_executor.shutdown()
 
@@ -429,10 +434,9 @@ class _QEventLoop:
                 "callback must be callable: {}".format(type(callback).__name__)
             )
 
-        self._logger.debug(
-            "Registering callback {} to be invoked with arguments {} after {} second(s)".format(
-                callback, args, delay
-            )
+        self.__log_debug(
+            "Registering callback %s to be invoked with arguments %s after %s second(s)",
+            callback, args, delay
         )
 
         if sys.version_info >= (3, 7):
@@ -472,7 +476,7 @@ class _QEventLoop:
 
         notifier = QtCore.QSocketNotifier(fd, QtCore.QSocketNotifier.Read)
         notifier.setEnabled(True)
-        self._logger.debug("Adding reader callback for file descriptor {}".format(fd))
+        self.__log_debug("Adding reader callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
             lambda: self.__on_notifier_ready(
                 self._read_notifiers, notifier, fd, callback, args
@@ -485,7 +489,7 @@ class _QEventLoop:
         if self.is_closed():
             return
 
-        self._logger.debug("Removing reader callback for file descriptor {}".format(fd))
+        self.__log_debug("Removing reader callback for file descriptor %s", fd)
         try:
             notifier = self._read_notifiers.pop(fd)
         except KeyError:
@@ -509,7 +513,7 @@ class _QEventLoop:
 
         notifier = QtCore.QSocketNotifier(fd, QtCore.QSocketNotifier.Write)
         notifier.setEnabled(True)
-        self._logger.debug("Adding writer callback for file descriptor {}".format(fd))
+        self.__log_debug("Adding writer callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
             lambda: self.__on_notifier_ready(
                 self._write_notifiers, notifier, fd, callback, args
@@ -522,7 +526,7 @@ class _QEventLoop:
         if self.is_closed():
             return
 
-        self._logger.debug("Removing writer callback for file descriptor {}".format(fd))
+        self.__log_debug("Removing writer callback for file descriptor %s", fd)
         try:
             notifier = self._write_notifiers.pop(fd)
         except KeyError:
@@ -550,8 +554,8 @@ class _QEventLoop:
     def __on_notifier_ready(self, notifiers, notifier, fd, callback, args):
         if fd not in notifiers:
             self._logger.warning(
-                f"Socket notifier for fd {fd} is ready, even though it should "
-                f"be disabled, not calling {callback} and disabling"
+                "Socket notifier for fd %s is ready, even though it should "
+                "be disabled, not calling %s and disabling", fd, callback
             )
             notifier.setEnabled(False)
             return
@@ -559,7 +563,7 @@ class _QEventLoop:
         # It can be necessary to disable QSocketNotifier when e.g. checking
         # ZeroMQ sockets for events
         assert notifier.isEnabled()
-        self._logger.debug("Socket notifier for fd {} is ready".format(fd))
+        self.__log_debug("Socket notifier for fd %s is ready", fd)
         notifier.setEnabled(False)
         self.call_soon(
             self.__notifier_cb_wrapper, notifiers, notifier, fd, callback, args
@@ -577,8 +581,8 @@ class _QEventLoop:
         If no executor is provided, the default executor will be used, which defers execution to
         a background thread.
         """
-        self._logger.debug(
-            "Running callback {} with args {} in executor".format(callback, args)
+        self.__log_debug(
+            "Running callback %s with args %s in executor", callback, args
         )
         if isinstance(callback, asyncio.Handle):
             assert not args
@@ -590,11 +594,11 @@ class _QEventLoop:
             callback, args = callback.callback, callback.args
 
         if executor is None:
-            self._logger.debug("Using default executor")
+            self.__log_debug("Using default executor")
             executor = self.__default_executor
 
         if executor is None:
-            self._logger.debug("Creating default executor")
+            self.__log_debug("Creating default executor")
             executor = self.__default_executor = QThreadExecutor()
 
         return asyncio.wrap_future(executor.submit(callback, *args))
@@ -619,7 +623,7 @@ class _QEventLoop:
         context parameter has the same meaning as in
         `call_exception_handler()`.
         """
-        self._logger.debug("Default exception handler executing")
+        self.__log_debug("Default exception handler executing")
         message = context.get("message")
         if not message:
             message = "Unhandled exception in event loop"
@@ -681,6 +685,7 @@ class _QEventLoop:
     def set_debug(self, enabled):
         super().set_debug(enabled)
         self.__debug_enabled = enabled
+        self._timer.set_debug(enabled)
 
     def __enter__(self):
         return self
@@ -688,6 +693,10 @@ class _QEventLoop:
     def __exit__(self, *args):
         self.stop()
         self.close()
+
+    def __log_debug(self, *args, **kwargs):
+        if self.__debug_enabled:
+            self._logger.debug(*args, **kwargs)
 
     @classmethod
     def __log_error(cls, *args, **kwds):

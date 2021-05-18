@@ -39,7 +39,7 @@ class _ProactorEventLoop(asyncio.ProactorEventLoop):
         """Process events from proactor."""
         for f, callback, transferred, key, ov in events:
             try:
-                self._logger.debug('Invoking event callback {}'.format(callback))
+                self._logger.debug('Invoking event callback %s', callback)
                 value = callback(transferred, key, ov)
             except OSError as e:
                 self._logger.debug('Event callback failed', exc_info=sys.exc_info())
@@ -162,7 +162,7 @@ class _EventWorker(QtCore.QThread):
         while not self.__stop:
             events = self.__proactor.select(0.01)
             if events:
-                self._logger.debug('Got events from poll: {}'.format(events))
+                self._logger.debug('Got events from poll: %s', events)
                 self.__sig_events.emit(events)
 
         self._logger.debug('Exiting thread')
@@ -177,7 +177,7 @@ class _EventPoller:
         self.sig_events = sig_events
 
     def start(self, proactor):
-        self._logger.debug('Starting (proactor: {})...'.format(proactor))
+        self._logger.debug('Starting (proactor: %s)...', proactor)
         self.__worker = _EventWorker(proactor, self)
         self.__worker.start()
 

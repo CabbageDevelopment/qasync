@@ -456,7 +456,7 @@ class _QEventLoop:
         """Get time according to event loop's clock."""
         return time.monotonic()
 
-    def add_reader(self, fd, callback, *args):
+    def _add_reader(self, fd, callback, *args):
         """Register a callback for when a file descriptor is ready for reading."""
         self._check_closed()
 
@@ -480,7 +480,7 @@ class _QEventLoop:
         )
         self._read_notifiers[fd] = notifier
 
-    def remove_reader(self, fd):
+    def _remove_reader(self, fd):
         """Remove reader callback."""
         if self.is_closed():
             return
@@ -494,7 +494,7 @@ class _QEventLoop:
             notifier.setEnabled(False)
             return True
 
-    def add_writer(self, fd, callback, *args):
+    def _add_writer(self, fd, callback, *args):
         """Register a callback for when a file descriptor is ready for writing."""
         self._check_closed()
         try:
@@ -517,7 +517,7 @@ class _QEventLoop:
         )
         self._write_notifiers[fd] = notifier
 
-    def remove_writer(self, fd):
+    def _remove_writer(self, fd):
         """Remove writer callback."""
         if self.is_closed():
             return

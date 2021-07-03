@@ -717,7 +717,7 @@ def test_scheduling(loop, sock_pair):
 def test_exception_handler(loop):
     handler_called = False
     coro_run = False
-    loop.set_debug(True)
+    loop.set_debug(False)
 
     async def future_except():
         nonlocal coro_run

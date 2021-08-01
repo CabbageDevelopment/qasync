@@ -73,21 +73,21 @@ class MainWindow(QWidget):
 async def main():
     def close_future(future, loop):
         loop.call_later(10, future.cancel)
-        future.cancel("Close Application")
+        future.cancel()
 
     loop = asyncio.get_event_loop()
     future = asyncio.Future()
 
     app = QApplication.instance()
-    if hasattr(app, 'aboutToQuit'):
-        getattr(app, 'aboutToQuit')\
-            .connect(functools.partial(close_future, future, loop))
+    if hasattr(app, "aboutToQuit"):
+        getattr(app, "aboutToQuit").connect(
+            functools.partial(close_future, future, loop)
+        )
 
     mainWindow = MainWindow()
     mainWindow.show()
 
     await future
-
     return True
 
 

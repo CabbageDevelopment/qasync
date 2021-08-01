@@ -5,9 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 pytest = "*"
-pathlib2 = "*"
-atomicwrites = "*"
 pytest-forked = "*"
+pytest-raises = "*"
 
 [packages]
 

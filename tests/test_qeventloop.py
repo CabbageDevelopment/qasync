@@ -357,7 +357,7 @@ def test_can_add_reader(loop, sock_pair):
     exp_num_notifiers = len(loop._read_notifiers) + 1
     got_msg = None
     fut = asyncio.Future()
-    loop.add_reader(srv_sock.fileno(), can_read)
+    loop._add_reader(srv_sock.fileno(), can_read)
     assert len(loop._read_notifiers) == exp_num_notifiers, "Notifier should be added"
     loop.run_until_complete(asyncio.wait_for(fut, timeout=1.0))
 
@@ -378,9 +378,9 @@ def test_can_remove_reader(loop, sock_pair):
     client_sock, srv_sock = sock_pair
 
     got_msg = None
-    loop.add_reader(srv_sock.fileno(), can_read)
+    loop._add_reader(srv_sock.fileno(), can_read)
     exp_num_notifiers = len(loop._read_notifiers) - 1
-    loop.remove_reader(srv_sock.fileno())
+    loop._remove_reader(srv_sock.fileno())
     assert len(loop._read_notifiers) == exp_num_notifiers, "Notifier should be removed"
     client_sock.send(b"a")
     client_sock.close()
@@ -395,18 +395,18 @@ def test_remove_reader_after_closing(loop, sock_pair):
     """Verify that we can remove a reader callback from an event loop."""
     client_sock, srv_sock = sock_pair
 
-    loop.add_reader(srv_sock.fileno(), lambda: None)
+    loop._add_reader(srv_sock.fileno(), lambda: None)
     loop.close()
-    loop.remove_reader(srv_sock.fileno())
+    loop._remove_reader(srv_sock.fileno())
 
 
 def test_remove_writer_after_closing(loop, sock_pair):
     """Verify that we can remove a reader callback from an event loop."""
     client_sock, srv_sock = sock_pair
 
-    loop.add_writer(client_sock.fileno(), lambda: None)
+    loop._add_writer(client_sock.fileno(), lambda: None)
     loop.close()
-    loop.remove_writer(client_sock.fileno())
+    loop._remove_writer(client_sock.fileno())
 
 
 def test_add_reader_after_closing(loop, sock_pair):
@@ -415,7 +415,7 @@ def test_add_reader_after_closing(loop, sock_pair):
 
     loop.close()
     with pytest.raises(RuntimeError):
-        loop.add_reader(srv_sock.fileno(), lambda: None)
+        loop._add_reader(srv_sock.fileno(), lambda: None)
 
 
 def test_add_writer_after_closing(loop, sock_pair):
@@ -424,7 +424,7 @@ def test_add_writer_after_closing(loop, sock_pair):
 
     loop.close()
     with pytest.raises(RuntimeError):
-        loop.add_writer(client_sock.fileno(), lambda: None)
+        loop._add_writer(client_sock.fileno(), lambda: None)
 
 
 def test_can_add_writer(loop, sock_pair):
@@ -438,7 +438,7 @@ def test_can_add_writer(loop, sock_pair):
 
     client_sock, _ = sock_pair
     fut = asyncio.Future()
-    loop.add_writer(client_sock.fileno(), can_write)
+    loop._add_writer(client_sock.fileno(), can_write)
     assert len(loop._write_notifiers) == 1, "Notifier should be added"
     loop.run_until_complete(asyncio.wait_for(fut, timeout=1.0))
 
@@ -446,8 +446,8 @@ def test_can_add_writer(loop, sock_pair):
 def test_can_remove_writer(loop, sock_pair):
     """Verify that we can remove a writer callback from an event loop."""
     client_sock, _ = sock_pair
-    loop.add_writer(client_sock.fileno(), lambda: None)
-    loop.remove_writer(client_sock.fileno())
+    loop._add_writer(client_sock.fileno(), lambda: None)
+    loop._remove_writer(client_sock.fileno())
     assert not loop._write_notifiers, "Notifier should be removed"
 
 
@@ -478,7 +478,7 @@ def test_add_reader_should_disable_qsocket_notifier_on_callback(loop, sock_pair)
     loop.call_soon(write)
 
     fut = asyncio.Future()
-    loop.add_reader(srv_sock.fileno(), can_read)
+    loop._add_reader(srv_sock.fileno(), can_read)
     notifier = loop._read_notifiers[srv_sock.fileno()]
     loop.run_until_complete(asyncio.wait_for(fut, timeout=1.0))
 
@@ -503,7 +503,7 @@ def test_add_writer_should_disable_qsocket_notifier_on_callback(loop, sock_pair)
     num_calls = 0
     client_sock, _ = sock_pair
     fut = asyncio.Future()
-    loop.add_writer(client_sock.fileno(), can_write)
+    loop._add_writer(client_sock.fileno(), can_write)
     notifier = loop._write_notifiers[client_sock.fileno()]
     loop.run_until_complete(asyncio.wait_for(fut, timeout=1.0))
 
@@ -548,16 +548,16 @@ def test_regression_bug13(loop, sock_pair):
         def cb1():
             nonlocal result1
             assert result1 is None
-            loop.remove_reader(c_sock.fileno())
+            loop._remove_reader(c_sock.fileno())
             result1 = c_sock.recv(1)
-            loop.add_writer(c_sock.fileno(), cb2)
+            loop._add_writer(c_sock.fileno(), cb2)
 
         def cb2():
             nonlocal result3
             assert result3 is None
             c_sock.send(b"2")
-            loop.remove_writer(c_sock.fileno())
-            loop.add_reader(c_sock.fileno(), cb3)
+            loop._remove_writer(c_sock.fileno())
+            loop._add_reader(c_sock.fileno(), cb3)
 
         def cb3():
             nonlocal result3
@@ -565,7 +565,7 @@ def test_regression_bug13(loop, sock_pair):
             result3 = c_sock.recv(1)
             client_done.set_result(True)
 
-        loop.add_reader(c_sock.fileno(), cb1)
+        loop._add_reader(c_sock.fileno(), cb1)
 
     asyncio.ensure_future(client_coro())
     asyncio.ensure_future(server_coro())
@@ -586,7 +586,7 @@ def test_add_reader_replace(loop, sock_pair):
     def any_callback():
         if not callback_invoked.done():
             callback_invoked.set_result(True)
-        loop.remove_reader(c_sock.fileno())
+        loop._remove_reader(c_sock.fileno())
 
     def callback1():
         # the "bad" callback: if this gets invoked, something went wrong
@@ -606,10 +606,10 @@ def test_add_reader_replace(loop, sock_pair):
         await s_writer.drain()
 
     async def client_coro():
-        loop.add_reader(c_sock.fileno(), callback1)
-        loop.add_reader(c_sock.fileno(), callback2)
+        loop._add_reader(c_sock.fileno(), callback1)
+        loop._add_reader(c_sock.fileno(), callback2)
         await callback_invoked
-        loop.remove_reader(c_sock.fileno())
+        loop._remove_reader(c_sock.fileno())
         assert (await loop.sock_recv(c_sock, 3)) == b"foo"
 
     client_done = asyncio.ensure_future(client_coro())
@@ -633,7 +633,7 @@ def test_add_writer_replace(loop, sock_pair):
     def any_callback():
         if not callback_invoked.done():
             callback_invoked.set_result(True)
-        loop.remove_writer(c_sock.fileno())
+        loop._remove_writer(c_sock.fileno())
 
     def callback1():
         # the "bad" callback: if this gets invoked, something went wrong
@@ -648,10 +648,10 @@ def test_add_writer_replace(loop, sock_pair):
         any_callback()
 
     async def client_coro():
-        loop.add_writer(c_sock.fileno(), callback1)
-        loop.add_writer(c_sock.fileno(), callback2)
+        loop._add_writer(c_sock.fileno(), callback1)
+        loop._add_writer(c_sock.fileno(), callback2)
         await callback_invoked
-        loop.remove_writer(c_sock.fileno())
+        loop._remove_writer(c_sock.fileno())
 
     loop.run_until_complete(asyncio.wait_for(client_coro(), timeout=0.1))
     assert not called1
@@ -664,10 +664,10 @@ def test_remove_reader_idempotence(loop, sock_pair):
     def cb():
         pass
 
-    removed0 = loop.remove_reader(fd)
-    loop.add_reader(fd, cb)
-    removed1 = loop.remove_reader(fd)
-    removed2 = loop.remove_reader(fd)
+    removed0 = loop._remove_reader(fd)
+    loop._add_reader(fd, cb)
+    removed1 = loop._remove_reader(fd)
+    removed2 = loop._remove_reader(fd)
 
     assert not removed0
     assert removed1
@@ -680,10 +680,10 @@ def test_remove_writer_idempotence(loop, sock_pair):
     def cb():
         pass
 
-    removed0 = loop.remove_writer(fd)
-    loop.add_writer(fd, cb)
-    removed1 = loop.remove_writer(fd)
-    removed2 = loop.remove_writer(fd)
+    removed0 = loop._remove_writer(fd)
+    loop._add_writer(fd, cb)
+    removed1 = loop._remove_writer(fd)
+    removed2 = loop._remove_writer(fd)
 
     assert not removed0
     assert removed1
@@ -701,12 +701,12 @@ def test_scheduling(loop, sock_pair):
         fut.set_result(None)
 
     def fut_cb(fut):
-        loop.remove_writer(fd)
+        loop._remove_writer(fd)
         cb_called.set_result(None)
 
     fut = asyncio.Future()
     fut.add_done_callback(fut_cb)
-    loop.add_writer(fd, writer_cb, fut)
+    loop._add_writer(fd, writer_cb, fut)
     loop.run_until_complete(cb_called)
 
 

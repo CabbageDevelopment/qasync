@@ -131,7 +131,7 @@ class _QThreadWorker(QtCore.QThread):
             future, callback, args, kwargs = command
             self._logger.debug(
                 "#%s got callback %s with args %s and kwargs %s from queue",
-                    self.__num, callback, args, kwargs
+                self.__num, callback, args, kwargs
             )
             if future.set_running_or_notify_cancel():
                 self._logger.debug("Invoking callback")
@@ -284,6 +284,16 @@ class _SimpleTimer(QtCore.QObject):
     def __log_debug(self, *args, **kwargs):
         if self.__debug_enabled:
             self._logger.debug(*args, **kwargs)
+
+
+def _fileno(fd):
+    if isinstance(fd, int):
+        return fd
+    try:
+        return int(fd.fileno())
+    except (AttributeError, TypeError, ValueError):
+        raise ValueError(f"Invalid file object: {fd!r}") from None
+
 
 @with_logger
 class _QEventLoop:
@@ -474,7 +484,7 @@ class _QEventLoop:
             existing.activated["int"].disconnect()
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(fd, QtCore.QSocketNotifier.Read)
+        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Read)
         notifier.setEnabled(True)
         self.__log_debug("Adding reader callback for file descriptor %s", fd)
         notifier.activated["int"].connect(

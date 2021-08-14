@@ -14,7 +14,7 @@ __author__ = (
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
 )
-__version__ = "0.18.0"
+__version__ = "0.18.1"
 __url__ = "https://github.com/CabbageDevelopment/qasync"
 __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
@@ -131,7 +131,10 @@ class _QThreadWorker(QtCore.QThread):
             future, callback, args, kwargs = command
             self._logger.debug(
                 "#%s got callback %s with args %s and kwargs %s from queue",
-                self.__num, callback, args, kwargs
+                self.__num,
+                callback,
+                args,
+                kwargs,
             )
             if future.set_running_or_notify_cancel():
                 self._logger.debug("Invoking callback")
@@ -194,7 +197,9 @@ class QThreadExecutor:
         future = Future()
         self._logger.debug(
             "Submitting callback %s with args %s and kwargs %s to thread worker queue",
-            callback, args, kwargs
+            callback,
+            args,
+            kwargs,
         )
         self.__queue.put((future, callback, args, kwargs))
         return future
@@ -446,7 +451,9 @@ class _QEventLoop:
 
         self.__log_debug(
             "Registering callback %s to be invoked with arguments %s after %s second(s)",
-            callback, args, delay
+            callback,
+            args,
+            delay,
         )
 
         if sys.version_info >= (3, 7):
@@ -565,7 +572,9 @@ class _QEventLoop:
         if fd not in notifiers:
             self._logger.warning(
                 "Socket notifier for fd %s is ready, even though it should "
-                "be disabled, not calling %s and disabling", fd, callback
+                "be disabled, not calling %s and disabling",
+                fd,
+                callback,
             )
             notifier.setEnabled(False)
             return
@@ -591,9 +600,7 @@ class _QEventLoop:
         If no executor is provided, the default executor will be used, which defers execution to
         a background thread.
         """
-        self.__log_debug(
-            "Running callback %s with args %s in executor", callback, args
-        )
+        self.__log_debug("Running callback %s with args %s in executor", callback, args)
         if isinstance(callback, asyncio.Handle):
             assert not args
             assert not isinstance(callback, asyncio.TimerHandle)

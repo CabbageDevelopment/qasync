@@ -14,6 +14,7 @@ cache: pip
 
 install:
   - pip install pipenv
+  - pipenv update pip
   - pipenv install --dev
   - pipenv run pip install PyQt5 PySide2 PyQt6
 

@@ -1,0 +1,47 @@
+name: test
+
+on: [push]
+
+jobs:
+  ci:
+    name: Python-${{ matrix.python }} ${{ matrix.qt.qt_api }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        qt:
+          - package: PyQt5
+            qt_api: "pyqt5"
+          - package: PyQt6
+            qt_api: "pyqt6"
+          - package: PySide2
+            qt_api: "pyside2"
+          - package: PySide6
+            qt_api: "pyside6"
+        python: [3.6, 3.7, 3.8, 3.9]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+          architecture: x64
+      - name: Install pipenv
+        run: |
+          python -m pip install --upgrade pipenv wheel
+      - name: Install dependencies
+        run: |
+          pipenv install --dev
+          pipenv run pip install ${{ matrix.qt.package }} pytest
+      - name: Install Libxcb dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
+      - name: Run headless test
+        uses: GabrielBB/xvfb-action@v1
+        env:
+          QT_API: ${{ matrix.qt.qt_api }}
+        with:
+          run: pipenv run py.test --forked -v

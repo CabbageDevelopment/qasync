@@ -40,6 +40,7 @@ qtapi_env = os.getenv("QT_API", "").strip().lower()
 if qtapi_env:
     env_to_mod_map = {
         "pyqt5": "PyQt5",
+        "pyqt6": "PyQt6",
         "pyqt": "PyQt4",
         "pyqt4": "PyQt4",
         "pyside6": "PySide6",
@@ -60,14 +61,14 @@ if qtapi_env:
 
 # If a Qt lib is already imported, use that
 if not QtModule:
-    for QtModuleName in ("PyQt5", "PySide2", "PySide6"):
+    for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         if QtModuleName in sys.modules:
             QtModule = sys.modules[QtModuleName]
             break
 
 # Try importing qt libs
 if not QtModule:
-    for QtModuleName in ("PyQt5", "PySide2", "PySide6"):
+    for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         try:
             QtModule = importlib.import_module(QtModuleName)
         except ImportError:
@@ -86,6 +87,12 @@ QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 if QtModuleName == "PyQt5":
     from PyQt5 import QtWidgets
     from PyQt5.QtCore import pyqtSlot as Slot
+
+    QApplication = QtWidgets.QApplication
+
+elif QtModuleName == "PyQt6":
+    from PyQt6 import QtWidgets
+    from PyQt6.QtCore import pyqtSlot as Slot
 
     QApplication = QtWidgets.QApplication
 
@@ -366,7 +373,11 @@ class _QEventLoop:
 
         try:
             self.__log_debug("Starting Qt event loop")
-            rslt = self.__app.exec_()
+            rslt = -1
+            try:
+                rslt = self.__app.exec_()
+            except AttributeError:
+                rslt = self.__app.exec()
             self.__log_debug("Qt event loop ended with result %s", rslt)
             return rslt
         finally:
@@ -491,7 +502,7 @@ class _QEventLoop:
             existing.activated["int"].disconnect()
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Read)
+        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Type.Read)
         notifier.setEnabled(True)
         self.__log_debug("Adding reader callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
@@ -528,7 +539,7 @@ class _QEventLoop:
             existing.activated["int"].disconnect()
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(fd, QtCore.QSocketNotifier.Write)
+        notifier = QtCore.QSocketNotifier(fd, QtCore.QSocketNotifier.Type.Write)
         notifier.setEnabled(True)
         self.__log_debug("Adding writer callback for file descriptor %s", fd)
         notifier.activated["int"].connect(

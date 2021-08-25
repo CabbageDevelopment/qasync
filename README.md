@@ -4,6 +4,7 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
 [![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/qasync)](https://pypi.org/project/qasync)
+[![test](https://github.com/CabbageDevelopment/qasync/actions/workflows/test.yml/badge.svg)](https://github.com/CabbageDevelopment/qasync/actions/workflows/test.yml)
 
 ## Introduction
 

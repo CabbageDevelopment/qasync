@@ -85,28 +85,28 @@ QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 
 if QtModuleName == "PyQt5":
-    from PyQt5 import QtWidgets
+    from PyQt5 import QtCore
     from PyQt5.QtCore import pyqtSlot as Slot
 
-    QApplication = QtWidgets.QApplication
+    QApplication = QtCore.QCoreApplication
 
 elif QtModuleName == "PyQt6":
-    from PyQt6 import QtWidgets
+    from PyQt6 import QtCore
     from PyQt6.QtCore import pyqtSlot as Slot
 
-    QApplication = QtWidgets.QApplication
+    QApplication = QtCore.QCoreApplication
 
 elif QtModuleName == "PySide2":
-    from PySide2 import QtWidgets
+    from PySide2 import QtCore
     from PySide2.QtCore import Slot
 
-    QApplication = QtWidgets.QApplication
+    QApplication = QtCore.QCoreApplication
 
 elif QtModuleName == "PySide6":
-    from PySide6 import QtWidgets
+    from PySide6 import QtCore
     from PySide6.QtCore import Slot
 
-    QApplication = QtWidgets.QApplication
+    QApplication = QtCore.QCoreApplication
 
 from ._common import with_logger  # noqa
 

@@ -539,7 +539,7 @@ class _QEventLoop:
             existing.activated["int"].disconnect()
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(fd, QtCore.QSocketNotifier.Type.Write)
+        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Type.Write)
         notifier.setEnabled(True)
         self.__log_debug("Adding writer callback for file descriptor %s", fd)
         notifier.activated["int"].connect(

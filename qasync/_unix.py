@@ -9,37 +9,11 @@ import asyncio
 import selectors
 import collections
 
-from . import QtCore, with_logger
+from . import QtCore, with_logger, _fileno
 
 
 EVENT_READ = (1 << 0)
 EVENT_WRITE = (1 << 1)
-
-
-def _fileobj_to_fd(fileobj):
-    """
-    Return a file descriptor from a file object.
-
-    Parameters:
-    fileobj -- file object or file descriptor
-
-    Returns:
-    corresponding file descriptor
-
-    Raises:
-    ValueError if the object is invalid
-
-    """
-    if isinstance(fileobj, int):
-        fd = fileobj
-    else:
-        try:
-            fd = int(fileobj.fileno())
-        except (AttributeError, TypeError, ValueError) as ex:
-            raise ValueError("Invalid file object: {!r}".format(fileobj)) from ex
-    if fd < 0:
-        raise ValueError("Invalid file descriptor: {}".format(fd))
-    return fd
 
 
 class _SelectorMapping(collections.abc.Mapping):
@@ -81,14 +55,14 @@ class _Selector(selectors.BaseSelector):
     def _fileobj_lookup(self, fileobj):
         """Return a file descriptor from a file object.
 
-        This wraps _fileobj_to_fd() to do an exhaustive search in case
+        This wraps _fileno() to do an exhaustive search in case
         the object is invalid but we still have it in our map.  This
         is used by unregister() so we can unregister an object that
         was previously registered even if it is closed.  It is also
         used by _SelectorMapping.
         """
         try:
-            return _fileobj_to_fd(fileobj)
+            return _fileno(fileobj)
         except ValueError:
             # Do an exhaustive search.
             for key in self._fd_to_key.values():

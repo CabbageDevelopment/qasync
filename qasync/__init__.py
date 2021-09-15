@@ -14,7 +14,7 @@ __author__ = (
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
 )
-__version__ = "0.21.0"
+__version__ = "0.22.0"
 __url__ = "https://github.com/CabbageDevelopment/qasync"
 __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
@@ -539,7 +539,10 @@ class _QEventLoop:
             existing.activated["int"].disconnect()
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Type.Write)
+        notifier = QtCore.QSocketNotifier(
+            _fileno(fd),
+            QtCore.QSocketNotifier.Type.Write,
+        )
         notifier.setEnabled(True)
         self.__log_debug("Adding writer callback for file descriptor %s", fd)
         notifier.activated["int"].connect(

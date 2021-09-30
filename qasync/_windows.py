@@ -87,13 +87,16 @@ class _IocpProactor(windows_events.IocpProactor):
         """Override in order to handle events in a threadsafe manner."""
         if timeout is None:
             ms = UINT32_MAX  # wait for eternity
+            print("Bug?")
         elif timeout < 0:
+            print("Bug?")
             raise ValueError("negative timeout")
         else:
             # GetQueuedCompletionStatus() has a resolution of 1 millisecond,
             # round away from zero to wait *at least* timeout seconds.
             ms = math.ceil(timeout * 1e3)
             if ms >= UINT32_MAX:
+                print("Bug?")
                 raise ValueError("timeout too big")
 
         with QtCore.QMutexLocker(self._lock):

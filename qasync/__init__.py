@@ -251,49 +251,12 @@ def _make_signaller(qtimpl_qtcore, *args):
 class _SimpleTimer(QtCore.QObject):
     def __init__(self):
         super().__init__()
-        self.__callbacks = {}
         self._stopped = False
         self.__debug_enabled = False
 
     def add_callback(self, handle, delay=0):
         QtCore.QTimer.singleShot(int(delay * 1000), lambda: handle._run() if not handle._cancelled else None)
         return handle
-        #timerid = self.startTimer(int(delay * 1000))
-        #if delay != 0:
-        #    print(f"Non-zero delay {delay} for {timerid}")
-        #self.__log_debug("Registering timer id %s", timerid)
-        #assert timerid not in self.__callbacks
-        #self.__callbacks[timerid] = handle
-        #return handle
-
-    def timerEvent(self, event):  # noqa: N802
-        timerid = event.timerId()
-        self.__log_debug("Timer event on id %s", timerid)
-        if self._stopped:
-            self.__log_debug("Timer stopped, killing %s", timerid)
-            self.killTimer(timerid)
-            del self.__callbacks[timerid]
-        else:
-            try:
-                handle = self.__callbacks[timerid]
-            except KeyError as e:
-                print(f"No timer: {timerid}")
-                self.__log_debug(e)
-            else:
-                if handle._cancelled:
-                    self.__log_debug("Handle %s cancelled", handle)
-                else:
-                    self.__log_debug("Calling handle %s", handle)
-                    try:
-                        handle._run()
-                    except:
-                        print("WTF?!?")
-            finally:
-                if timerid in self.__callbacks:
-                    del self.__callbacks[timerid]
-                handle = None
-                self.killTimer(timerid)
-                print(f"Deleted timer {timerid}: Remaining {len(self.__callbacks)}")
 
     def stop(self):
         self.__log_debug("Stopping timers")

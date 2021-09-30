@@ -282,9 +282,12 @@ class _SimpleTimer(QtCore.QObject):
                     self.__log_debug("Calling handle %s", handle)
                     handle._run()
             finally:
-                del self.__callbacks[timerid]
+                if timerid in self.__callbacks:
+                    del self.__callbacks[timerid]
                 handle = None
-            self.killTimer(timerid)
+                print(f"Timers: {len(self.__callbacks)}")
+
+                self.killTimer(timerid)
 
     def stop(self):
         self.__log_debug("Stopping timers")

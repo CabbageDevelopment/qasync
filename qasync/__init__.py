@@ -252,10 +252,30 @@ class _SimpleTimer(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self._stopped = False
+        self._timers = {}
+        self.handles = {}
         self.__debug_enabled = False
 
+    def run_timer(self, delay):
+        if delay in self.handles:
+            for handle in self.handles[delay]:
+                if not handle._cancelled:
+                    handle._run()
+
+        del self.handles[delay]
+        self._timers[delay].stop()
+
     def add_callback(self, handle, delay=0):
-        QtCore.QTimer.singleShot(int(delay * 1000), lambda: handle._run() if not handle._cancelled else None)
+        delay = int(delay * 1000)
+        if delay not in self._timers:
+            timer = QtCore.QTimer(self)
+            timer.timeout.connect(lambda: self.run_timer(delay))
+            self._timers[delay] = timer
+
+        if delay not in self.handles:
+            self.handles[delay] = []
+        self.handles[delay].append(handle)
+        self._timers[delay].start(delay)
         return handle
 
     def stop(self):

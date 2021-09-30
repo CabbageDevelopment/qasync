@@ -258,13 +258,14 @@ class _SimpleTimer(QtCore.QObject):
         self.__debug_enabled = False
 
     def run_timer(self, delay):
-        if delay in self.handles:
-            for handle in self.handles[delay]:
-                if not handle._cancelled:
-                    handle._run()
-
-        del self.handles[delay]
-        self._timers[delay].stop()
+        try:
+            if delay in self.handles:
+                for handle in self.handles[delay]:
+                    if not handle._cancelled:
+                        handle._run()
+        finally:
+            del self.handles[delay]
+            self._timers[delay][0].stop()
 
     def add_callback(self, handle, delay=0):
         delay = int(delay * 1000)
@@ -281,8 +282,8 @@ class _SimpleTimer(QtCore.QObject):
 
         # Clean up old timers
         to_delete = []
-        for (key, (_, timestamp)) in self._timers.items():
-            if datetime.utcnow() - timestamp > timedelta(seconds=60):
+        for (key, (timer, timestamp)) in self._timers.items():
+            if not timer.isActive() and datetime.utcnow() - timestamp > timedelta(seconds=60):
                 to_delete.append(key)
 
         for key in to_delete:

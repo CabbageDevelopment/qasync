@@ -281,7 +281,7 @@ class _SimpleTimer(QtCore.QObject):
 
         # Clean up old timers
         to_delete = []
-        for (key, (_, timestamp)) in self._timers:
+        for (key, (_, timestamp)) in self._timers.items():
             if datetime.utcnow() - timestamp > timedelta(seconds=60):
                 to_delete.append(key)
 

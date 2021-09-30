@@ -25,6 +25,7 @@ import functools
 import importlib
 import itertools
 import logging
+from datetime import datetime, timedelta
 import os
 import sys
 import time
@@ -270,12 +271,23 @@ class _SimpleTimer(QtCore.QObject):
         if delay not in self._timers:
             timer = QtCore.QTimer(self)
             timer.timeout.connect(lambda: self.run_timer(delay))
-            self._timers[delay] = timer
+            self._timers[delay] = (timer, datetime.utcnow())
 
         if delay not in self.handles:
             self.handles[delay] = []
         self.handles[delay].append(handle)
-        self._timers[delay].start(delay)
+        self._timers[delay][0].start(delay)
+        self._timers[delay] = (self._timers[delay][0], datetime.utcnow())
+
+        # Clean up old timers
+        to_delete = []
+        for (key, (_, timestamp)) in self._timers:
+            if datetime.utcnow() - timestamp > timedelta(seconds=60):
+                to_delete.append(key)
+
+        for key in to_delete:
+            del self._timers[key]
+
         return handle
 
     def stop(self):

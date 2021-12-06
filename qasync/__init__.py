@@ -796,7 +796,7 @@ def asyncSlot(*args):
 
 class QEventLoopPolicyMixin:
     def new_event_loop(self):
-        return QEventLoop(QApplication(sys.argv))
+        return QEventLoop(QApplication.instance() or QApplication(sys.argv))
 
 
 class DefaultQEventLoopPolicy(

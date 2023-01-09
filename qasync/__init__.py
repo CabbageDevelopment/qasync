@@ -23,6 +23,7 @@ import asyncio
 import contextlib
 import functools
 import importlib
+import inspect
 import itertools
 import logging
 import os
@@ -785,8 +786,25 @@ def asyncSlot(*args, **kwargs):
         @Slot(*args, **kwargs)
         @functools.wraps(fn)
         def wrapper(*args, **kwargs):
-            task = asyncio.ensure_future(fn(*args, **kwargs))
-            task.add_done_callback(_error_handler)
+            # Qt ignores trailing args from a signal but python does
+            # not so inspect the slot signature and if it's not
+            # callable try removing args until it is.
+            task = None
+            while len(args):
+                try:
+                    inspect.signature(fn).bind(*args, **kwargs)
+                except TypeError:
+                    if len(args):
+                        # Only convert args to a list if we need to pop()
+                        args = list(args)
+                        args.pop()
+                        continue
+                else:
+                    task = asyncio.ensure_future(fn(*args, **kwargs))
+                    task.add_done_callback(_error_handler)
+                    break
+            if task is None:
+                raise TypeError("asyncSlot was not callable from Signal. Potential signature mismatch.")
             return task
 
         return wrapper

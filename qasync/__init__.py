@@ -374,6 +374,7 @@ class _QEventLoop:
 
         try:
             self.__log_debug("Starting Qt event loop")
+            asyncio.events._set_running_loop(self)
             rslt = -1
             try:
                 rslt = self.__app.exec_()
@@ -382,6 +383,7 @@ class _QEventLoop:
             self.__log_debug("Qt event loop ended with result %s", rslt)
             return rslt
         finally:
+            asyncio.events._set_running_loop(None)
             self._after_run_forever()
             self.__is_running = False
 

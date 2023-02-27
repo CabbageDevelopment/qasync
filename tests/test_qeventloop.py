@@ -221,6 +221,27 @@ def test_loop_not_running(loop):
     assert not loop.is_running()
 
 
+def test_get_running_loop_fails_after_completion(loop):
+    """Verify that after loop stops, asyncio.get_running_loop() correctly raises a RuntimeError."""
+    async def is_running_loop():
+        nonlocal loop
+        assert asyncio.get_running_loop() == loop
+
+    loop.run_until_complete(is_running_loop())
+    with pytest.raises(RuntimeError):
+        assert asyncio.get_running_loop() != loop
+
+
+def test_loop_can_run_twice(loop):
+    """Verify that loop is correctly reset as asyncio.get_running_loop() when restarted."""
+    async def is_running_loop():
+        nonlocal loop
+        assert asyncio.get_running_loop() == loop
+
+    loop.run_until_complete(is_running_loop())
+    loop.run_until_complete(is_running_loop())
+
+
 def test_can_function_as_context_manager(application):
     """Verify that a QEventLoop can function as its own context manager."""
     with qasync.QEventLoop(application) as loop:

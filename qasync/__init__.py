@@ -14,7 +14,7 @@ __author__ = (
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
 )
-__version__ = "0.23.0"
+__version__ = "0.24.0"
 __url__ = "https://github.com/CabbageDevelopment/qasync"
 __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
@@ -185,11 +185,11 @@ class QThreadExecutor:
         if stack_size is None:
             # Match cpython/Python/thread_pthread.h
             if sys.platform.startswith("darwin"):
-                stack_size = 16 * 2 ** 20
+                stack_size = 16 * 2**20
             elif sys.platform.startswith("freebsd"):
-                stack_size = 4 * 2 ** 20
+                stack_size = 4 * 2**20
             elif sys.platform.startswith("aix"):
-                stack_size = 2 * 2 ** 20
+                stack_size = 2 * 2**20
         self.__workers = [
             _QThreadWorker(self.__queue, i + 1, stack_size) for i in range(max_workers)
         ]
@@ -806,7 +806,9 @@ def asyncSlot(*args, **kwargs):
                     task.add_done_callback(_error_handler)
                     break
             if task is None:
-                raise TypeError("asyncSlot was not callable from Signal. Potential signature mismatch.")
+                raise TypeError(
+                    "asyncSlot was not callable from Signal. Potential signature mismatch."
+                )
             return task
 
         return wrapper

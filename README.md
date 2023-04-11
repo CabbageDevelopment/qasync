@@ -1,6 +1,6 @@
 # qasync
 
-[![Maintenance](https://img.shields.io/maintenance/yes/2022)](https://pypi.org/project/qasync)
+[![Maintenance](https://img.shields.io/maintenance/yes/2023)](https://pypi.org/project/qasync)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
 [![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/qasync)](https://pypi.org/project/qasync)

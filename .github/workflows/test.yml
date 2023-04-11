@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-20.04, windows-latest]
         python: ["3.6", "3.7", "3.8", "3.9"]
         qt:
           - package: PyQt5
@@ -20,8 +20,10 @@ jobs:
             qt_api: "pyside2"
           - package: PySide6
             qt_api: "pyside6"
-        # exclude:
-        #   - {os: windows-latest, qt: {package: PySide2}}
+        exclude:
+          - os: windows-latest
+            python: "3.6"
+            qt: { package: PyQt6, qt_api: "pyqt6" }
 
     steps:
       - name: Checkout
@@ -43,13 +45,13 @@ jobs:
           pipenv run --python ${{ matrix.python }} pip install ${{ matrix.qt.package }} pytest
 
       - name: Install Libxcb dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
 
       - name: Run headless test
-        uses: GabrielBB/xvfb-action@v1.6
+        uses: coactions/setup-xvfb@v1
         env:
           QT_API: ${{ matrix.qt.qt_api }}
         with:

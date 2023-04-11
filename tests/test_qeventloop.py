@@ -222,21 +222,22 @@ def test_loop_not_running(loop):
 
 
 def test_get_running_loop_fails_after_completion(loop):
-    """Verify that after loop stops, asyncio.get_running_loop() correctly raises a RuntimeError."""
+    """Verify that after loop stops, asyncio._get_running_loop() correctly returns None."""
+
     async def is_running_loop():
         nonlocal loop
-        assert asyncio.get_running_loop() == loop
+        assert asyncio._get_running_loop() == loop
 
     loop.run_until_complete(is_running_loop())
-    with pytest.raises(RuntimeError):
-        assert asyncio.get_running_loop() != loop
+    assert asyncio._get_running_loop() is None
 
 
 def test_loop_can_run_twice(loop):
-    """Verify that loop is correctly reset as asyncio.get_running_loop() when restarted."""
+    """Verify that loop is correctly reset as asyncio._get_running_loop() when restarted."""
+
     async def is_running_loop():
         nonlocal loop
-        assert asyncio.get_running_loop() == loop
+        assert asyncio._get_running_loop() == loop
 
     loop.run_until_complete(is_running_loop())
     loop.run_until_complete(is_running_loop())

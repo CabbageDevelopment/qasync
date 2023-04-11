@@ -1,7 +1,7 @@
 repos:
 # Black formats the Python code.
 -   repo: https://github.com/psf/black
-    rev: stable
+    rev: 23.3.0
     hooks:
     - id: black
       language_version: python3

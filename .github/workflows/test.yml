@@ -23,8 +23,7 @@ jobs:
         exclude:
           - os: windows-latest
             python: "3.6"
-            qt:
-              - package: PyQt6
+            qt: { package: PyQt6, qt_api: "pyqt6" }
 
     steps:
       - name: Checkout

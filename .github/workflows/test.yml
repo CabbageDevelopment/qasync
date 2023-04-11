@@ -43,7 +43,7 @@ jobs:
           pipenv run --python ${{ matrix.python }} pip install ${{ matrix.qt.package }} pytest
 
       - name: Install Libxcb dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-20.04'
         run: |
           sudo apt-get update
           sudo apt-get install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev

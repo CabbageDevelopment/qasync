@@ -376,9 +376,9 @@ class _QEventLoop:
             self.__log_debug("Starting Qt event loop")
             asyncio.events._set_running_loop(self)
             rslt = -1
-            try:
+            if hasattr(self.__app, 'exec_'):
                 rslt = self.__app.exec_()
-            except AttributeError:
+            else:
                 rslt = self.__app.exec()
             self.__log_debug("Qt event loop ended with result %s", rslt)
             return rslt

@@ -330,9 +330,11 @@ class _QEventLoop:
     If the event loop shall be used with an existing and already running QApplication
     it must be specified in the constructor via already_running=True
     In this case the user is responsible for loop cleanup with stop() and close()
+
+    The set_running_loop parameter is there for backwards compatibility and does nothing.
     """
 
-    def __init__(self, app=None, set_running_loop=True, already_running=False):
+    def __init__(self, app=None, set_running_loop=False, already_running=False):
         self.__app = app or QApplication.instance()
         assert self.__app is not None, "No QApplication has been instantiated"
         self.__is_running = False
@@ -350,9 +352,6 @@ class _QEventLoop:
         assert self.__app is not None
         super().__init__()
 
-        if set_running_loop:
-            asyncio.events._set_running_loop(self)
-
         # We have to set __is_running to True after calling
         # super().__init__() because of a bug in BaseEventLoop.
         if already_running:
@@ -362,6 +361,9 @@ class _QEventLoop:
             # postprocessing for the eventloop is done
             self._before_run_forever()
             self.__app.aboutToQuit.connect(self._after_run_forever)
+
+            # for asyncio to recognize the already running loop
+            asyncio.events._set_running_loop(self)
 
     def run_forever(self):
         """Run eventloop forever."""

@@ -14,7 +14,7 @@ __author__ = (
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
 )
-__version__ = "0.24.0"
+__version__ = "0.24.2"
 __url__ = "https://github.com/CabbageDevelopment/qasync"
 __license__ = "BSD"
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
@@ -378,7 +378,7 @@ class _QEventLoop:
             self.__log_debug("Starting Qt event loop")
             asyncio.events._set_running_loop(self)
             rslt = -1
-            if hasattr(self.__app, 'exec_'):
+            if hasattr(self.__app, "exec_"):
                 rslt = self.__app.exec_()
             else:
                 rslt = self.__app.exec()

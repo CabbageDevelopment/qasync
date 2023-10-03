@@ -80,8 +80,6 @@ if not QtModule:
 if not QtModule:
     raise ImportError("No Qt implementations found")
 
-logger.info("Using Qt Implementation: {}".format(QtModuleName))
-
 QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 

@@ -257,7 +257,7 @@ class _SimpleTimer(QtCore.QObject):
         self.__debug_enabled = False
 
     def add_callback(self, handle, delay=0):
-        timerid = self.startTimer(int(delay * 1000))
+        timerid = self.startTimer(int(max(0, delay) * 1000))
         self.__log_debug("Registering timer id %s", timerid)
         assert timerid not in self.__callbacks
         self.__callbacks[timerid] = handle

@@ -108,4 +108,4 @@ jobs:
         env:
           QT_API: ${{ matrix.qt-version }}
         with:
-          run: poetry run pytest -v
+          run: poetry run pytest --cov qasync -v

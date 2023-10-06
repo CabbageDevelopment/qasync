@@ -16,15 +16,15 @@ on: [push]
 
 jobs:
   tests:
-    name: ${{ matrix.os }} / ${{ matrix.python-version }}
+    name: ${{ matrix.os }} / ${{ matrix.python }}
     runs-on: ${{ matrix.image }}
     strategy:
       matrix:
         os: [Ubuntu]
         # python: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         python: ["3.8"]
-        # qt: ["pyside2", "pysde6", "pyqt5", "pyqt6"]
-        qt: ["pysde6"]
+        # qt: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
+        qt: ["pyside6"]
         include:
           - os: Ubuntu
             image: ubuntu-20.04

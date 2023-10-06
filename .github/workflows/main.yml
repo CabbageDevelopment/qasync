@@ -1,0 +1,118 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '.cirrus.yml'
+      - '.github/workflows/docs.yml'
+    branches:
+      - '**'
+
+jobs:
+  tests:
+    name: ${{ matrix.os }} / ${{ matrix.python-version }}
+    runs-on: ${{ matrix.image }}
+    strategy:
+      matrix:
+        os: [Ubuntu]
+        # python: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python: ["3.8"]
+        # qt: ["pyside2", "pysde6", "pyqt5", "pyqt6"]
+        qt: ["pysde6"]
+        include:
+          - os: Ubuntu
+            image: ubuntu-20.04
+          # - os: Windows
+          #   image: windows-2022
+          # - os: MacOS
+          #   image: macos-12
+        # qt:
+        #   - package: PyQt5
+        #     qt_api: "pyqt5"
+        #   - package: PyQt6
+        #     qt_api: "pyqt6"
+        #   - package: PySide2
+        #     qt_api: "pyside2"
+        #   - package: PySide6
+        #     qt_api: "pyside6"
+        exclude:
+          - os: Windows
+            python: "3.6"
+            qt: "pyqt6"
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Get full Python version
+        id: full-python-version
+        run: echo version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))") >> $GITHUB_OUTPUT
+
+      - name: Bootstrap poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python - -y
+
+      - name: Update PATH
+        if: ${{ matrix.os != 'Windows' }}
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Update Path for Windows
+        if: ${{ matrix.os == 'Windows' }}
+        run: echo "$APPDATA\Python\Scripts" >> $GITHUB_PATH
+
+      - name: Enable long paths on Windows
+        if: ${{ matrix.os == 'Windows' }}
+        # Enable handling long path names (+260 char) on the Windows platform
+        # https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
+        run: git config --system core.longpaths true
+
+      - name: Configure poetry
+        run: poetry config virtualenvs.in-project true
+
+      # - name: Setup cache
+      #   uses: actions/cache@v3
+      #   id: cache
+      #   with:
+      #     path: .venv
+      #     key: venv-${{ runner.os }}-${{ matrix.qt }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+
+      # - name: Valdate cache
+      #   if: steps.cache.outputs.cache-hit == 'true'
+      #   run: |
+      #     timeout 10s poetry run pip --version || rm -rf .venv
+
+      - name: Check lock file
+        run: poetry check --lock
+
+      - name: Install dependencies
+        run: poetry install --with github-actions
+
+      - name: Install Qt
+        run: poetry run pip install ${{ matrix.qt}}
+
+      - name: Install libxcb dependencies
+        if: ${{ matrix.os == 'Ubuntu' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
+
+      # - name: Run mypy
+      #   run: poetry run mypy
+
+      - name: Run pytest
+        uses: coactions/setup-xvfb@v1
+        env:
+          QT_API: ${{ matrix.qt }}
+        with:
+          run: poetry run pytest -v

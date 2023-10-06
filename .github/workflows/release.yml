@@ -1,6 +1,6 @@
 # Upload a Python Package using Twine when a release is created
 
-name: Publish Python Package
+name: Release
 
 on:
   release:

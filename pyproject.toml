@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "qasync"
+version = "0.24.2"
+description = "Python library for using asyncio in Qt-based applications"
+authors = ["TheGreatCabbage <github.com/TheGreatCabbage>"]
+maintainers = ["Alex March <github.com/hosaka>"]
+license = "BSD-2-Clause"
+readme = "README.md"
+homepage = "https://github.com/CabbageDevelopment/qasync"
+repository = "https://github.com/CabbageDevelopment/qasync"
+keywords = ["Qt", "asncio"]
+classifiers = ["Topic :: Software Development :: Libraries :: Python Modules"]
+
+[tool.poetry.dependencies]
+python = "^3.6.1"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^2.17"
+pytest = "^7.0.1"
+pytest-raises = "^0.11"
+
+# only used in github actions
+[tool.poetry.group.github-actions]
+optional = true
+[tool.poetry.group.github-actions.dependencies]
+pytest-github-actions-annotate-failures = "^0.1.7"
+
+[build-system]
+requires = ["poetry-core>=1.5.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest]
+addopts = "-n auto"
+testpaths = ["tests"]

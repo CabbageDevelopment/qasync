@@ -37,6 +37,9 @@ jobs:
             python-version: "3.6"
             qt-version: "pyqt6"
       fail-fast: false
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Checkout
@@ -55,7 +58,7 @@ jobs:
         run: |
           curl -sSL https://install.python-poetry.org | python - -y
 
-      - name: Update PATH
+      - name: Update Path
         if: ${{ matrix.os != 'Windows' }}
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
@@ -65,8 +68,6 @@ jobs:
 
       - name: Enable long paths on Windows
         if: ${{ matrix.os == 'Windows' }}
-        # Enable handling long path names (+260 char) on the Windows platform
-        # https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
         run: git config --system core.longpaths true
 
       - name: Configure poetry

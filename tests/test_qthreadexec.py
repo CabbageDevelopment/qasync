@@ -43,6 +43,7 @@ def test_stack_recursion_limit(executor):
     # (or event SIGILL?)
     def rec(a, *args, **kwargs):
         rec(a, *args, **kwargs)
+
     fs = [executor.submit(rec, 1) for _ in range(10)]
     for f in fs:
         with pytest.raises(RecursionError):

@@ -12,8 +12,8 @@ import collections
 from . import QtCore, with_logger, _fileno
 
 
-EVENT_READ = (1 << 0)
-EVENT_WRITE = (1 << 1)
+EVENT_READ = 1 << 0
+EVENT_WRITE = 1 << 1
 
 
 class _SelectorMapping(collections.abc.Mapping):
@@ -75,7 +75,9 @@ class _Selector(selectors.BaseSelector):
         if (not events) or (events & ~(EVENT_READ | EVENT_WRITE)):
             raise ValueError("Invalid events: {!r}".format(events))
 
-        key = selectors.SelectorKey(fileobj, self._fileobj_lookup(fileobj), events, data)
+        key = selectors.SelectorKey(
+            fileobj, self._fileobj_lookup(fileobj), events, data
+        )
 
         if key.fd in self._fd_to_key:
             raise KeyError("{!r} (FD {}) is already registered".format(fileobj, key.fd))
@@ -84,23 +86,23 @@ class _Selector(selectors.BaseSelector):
 
         if events & EVENT_READ:
             notifier = QtCore.QSocketNotifier(key.fd, QtCore.QSocketNotifier.Read)
-            notifier.activated['int'].connect(self.__on_read_activated)
+            notifier.activated["int"].connect(self.__on_read_activated)
             self.__read_notifiers[key.fd] = notifier
         if events & EVENT_WRITE:
             notifier = QtCore.QSocketNotifier(key.fd, QtCore.QSocketNotifier.Write)
-            notifier.activated['int'].connect(self.__on_write_activated)
+            notifier.activated["int"].connect(self.__on_write_activated)
             self.__write_notifiers[key.fd] = notifier
 
         return key
 
     def __on_read_activated(self, fd):
-        self._logger.debug('File %s ready to read', fd)
+        self._logger.debug("File %s ready to read", fd)
         key = self._key_from_fd(fd)
         if key:
             self.__parent._process_event(key, EVENT_READ & key.events)
 
     def __on_write_activated(self, fd):
-        self._logger.debug('File %s ready to write', fd)
+        self._logger.debug("File %s ready to write", fd)
         key = self._key_from_fd(fd)
         if key:
             self.__parent._process_event(key, EVENT_WRITE & key.events)
@@ -112,7 +114,7 @@ class _Selector(selectors.BaseSelector):
             except KeyError:
                 pass
             else:
-                notifier.activated['int'].disconnect()
+                notifier.activated["int"].disconnect()
 
         try:
             key = self._fd_to_key.pop(self._fileobj_lookup(fileobj))
@@ -139,7 +141,7 @@ class _Selector(selectors.BaseSelector):
         return key
 
     def close(self):
-        self._logger.debug('Closing')
+        self._logger.debug("Closing")
         self._fd_to_key.clear()
         self.__read_notifiers.clear()
         self.__write_notifiers.clear()
@@ -179,17 +181,17 @@ class _SelectorEventLoop(asyncio.SelectorEventLoop):
 
     def _process_event(self, key, mask):
         """Selector has delivered us an event."""
-        self._logger.debug('Processing event with key %s and mask %s', key, mask)
+        self._logger.debug("Processing event with key %s and mask %s", key, mask)
         fileobj, (reader, writer) = key.fileobj, key.data
         if mask & selectors.EVENT_READ and reader is not None:
             if reader._cancelled:
                 self.remove_reader(fileobj)
             else:
-                self._logger.debug('Invoking reader callback: %s', reader)
+                self._logger.debug("Invoking reader callback: %s", reader)
                 reader._run()
         if mask & selectors.EVENT_WRITE and writer is not None:
             if writer._cancelled:
                 self.remove_writer(fileobj)
             else:
-                self._logger.debug('Invoking writer callback: %s', writer)
+                self._logger.debug("Invoking writer callback: %s", writer)
                 writer._run()

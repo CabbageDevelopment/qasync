@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ matrix.image }}
     strategy:
       matrix:
-        os: [Ubuntu, Windows]
+        os: [Ubuntu, Windows, MacOS]
         # python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         python-version: ["3.8"]
         # qt-version: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
@@ -30,8 +30,8 @@ jobs:
             image: ubuntu-20.04
           - os: Windows
             image: windows-2022
-          # - os: MacOS
-          #   image: macos-12
+          - os: MacOS
+            image: macos-12
         exclude:
           - os: Windows
             python-version: "3.6"
@@ -83,6 +83,10 @@ jobs:
       - name: Valdate cache
         if: steps.cache.outputs.cache-hit == 'true'
         run: |
+          # `timeout` is not available on macOS, so we define a custom function.
+          [ "$(command -v timeout)" ] || function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+
+          # Using `timeout` is a safeguard against the Poetry command hanging for some reason.
           timeout 10s poetry run pip --version || rm -rf .venv
 
       - name: Check lock file

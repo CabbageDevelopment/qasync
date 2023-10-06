@@ -16,13 +16,13 @@ concurrency:
 
 jobs:
   tests:
-    name: ${{ matrix.os }} / ${{ matrix.python-verson }}
+    name: ${{ matrix.os }} / ${{ matrix.python-version }}
     runs-on: ${{ matrix.image }}
     strategy:
       matrix:
         os: [Ubuntu, Windows]
         # python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
-        python-verson: ["3.8"]
+        python-version: ["3.8"]
         # qt-version: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
         qt-version: ["pyside6"]
         include:

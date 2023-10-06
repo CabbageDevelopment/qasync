@@ -9,7 +9,7 @@ from pytest import fixture
 
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    level=logging.DEBUG, format="%(levelname)s\t%(filename)s:%(lineno)s %(message)s"
 )
 
 

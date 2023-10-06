@@ -145,6 +145,7 @@ class _IocpProactor(windows_events.IocpProactor):
                 status = _overlapped.GetQueuedCompletionStatus(self._iocp, ms)
                 if status is None:
                     break
+                ms = 0
 
                 err, transferred, key, address = status
                 try:
@@ -154,7 +155,6 @@ class _IocpProactor(windows_events.IocpProactor):
                     # handle which should be closed to avoid a leak.
                     if key not in (0, _overlapped.INVALID_HANDLE_VALUE):
                         _winapi.CloseHandle(key)
-                    ms = 0
                     continue
 
                 if obj in self._stopped_serving:
@@ -163,7 +163,11 @@ class _IocpProactor(windows_events.IocpProactor):
                 elif not f.done():
                     self.__events.append((f, callback, transferred, key, ov))
 
-                ms = 0
+        # Remove unregistered futures
+        for ov in self._unregistered:
+            self._cache.pop(ov.address, None)
+        self._unregistered.clear()
+
 
 
 @with_logger

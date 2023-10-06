@@ -10,17 +10,21 @@ on: [push]
 #     branches:
 #       - '**'
 
+concurrency:
+  group: tests-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   tests:
-    name: ${{ matrix.os }} / ${{ matrix.python }}
+    name: ${{ matrix.os }} / ${{ matrix.python-verson }}
     runs-on: ${{ matrix.image }}
     strategy:
       matrix:
         os: [Ubuntu, Windows]
-        # python: ["3.6", "3.7", "3.8", "3.9", "3.10"]
-        python: ["3.8"]
-        # qt: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
-        qt: ["pyside6"]
+        # python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-verson: ["3.8"]
+        # qt-version: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
+        qt-version: ["pyside6"]
         include:
           - os: Ubuntu
             image: ubuntu-20.04
@@ -30,18 +34,18 @@ jobs:
           #   image: macos-12
         exclude:
           - os: Windows
-            python: "3.6"
-            qt: "pyqt6"
+            python-version: "3.6"
+            qt-version: "pyqt6"
       fail-fast: false
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python }}
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Get full Python version
         id: full-python-version
@@ -73,7 +77,7 @@ jobs:
         id: cache
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ matrix.qt }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ matrix.qt-version }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Valdate cache
         if: steps.cache.outputs.cache-hit == 'true'
@@ -90,7 +94,7 @@ jobs:
       #   run: poetry run mypy
 
       - name: Install Qt
-        run: poetry run pip install ${{ matrix.qt}}
+        run: poetry run pip install ${{ matrix.qt-version }}
 
       - name: Install libxcb dependencies
         if: ${{ matrix.os == 'Ubuntu' }}
@@ -103,6 +107,6 @@ jobs:
       - name: Run pytest
         uses: coactions/setup-xvfb@v1
         env:
-          QT_API: ${{ matrix.qt }}
+          QT_API: ${{ matrix.qt-version }}
         with:
           run: poetry run pytest -v

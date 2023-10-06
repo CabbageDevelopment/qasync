@@ -1,16 +1,17 @@
 # qasync
 
 [![Maintenance](https://img.shields.io/maintenance/yes/2023)](https://pypi.org/project/qasync)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
-[![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/qasync)](https://pypi.org/project/qasync)
-[![test](https://github.com/CabbageDevelopment/qasync/actions/workflows/test.yml/badge.svg)](https://github.com/CabbageDevelopment/qasync/actions/workflows/test.yml)
+[![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
+[![PyPI - Download](https://img.shields.io/pypi/dm/qasync)](https://pypi.org/project/qasync)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CabbageDevelopment/qasync/main.yml)](https://github.com/CabbageDevelopment/qasync/actions/workflows/main.yml)
 
 ## Introduction
 
-`qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop. 
+`qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
 
-`qasync` is a fork of [asyncqt](https://github.com/gmarull/asyncqt), which is a fork of [quamash](https://github.com/harvimt/quamash). May it live longer than its predecessors. 
+`qasync` is a fork of [asyncqt](https://github.com/gmarull/asyncqt), which is a fork of [quamash](https://github.com/harvimt/quamash). May it live longer than its predecessors.
 
 #### The future of `qasync`
 
@@ -20,7 +21,9 @@
 
 ## Requirements
 
-`qasync` requires Python >= 3.6, and PyQt5 or PySide2.
+`qasync` requires Python >= 3.8, and PyQt5/PyQt6 or PySide2/PySide6. The library is tested on Ubuntu, Windows and MacOS.
+
+If you need Python 3.6 or 3.7 support, use the [v0.25.0](https://github.com/CabbageDevelopment/qasync/releases/tag/v0.25.0) tag/release.
 
 ## Installation
 

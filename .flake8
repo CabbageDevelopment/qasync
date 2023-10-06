@@ -1,3 +1,0 @@
-[flake8]
-exclude = __pycache__
-max-line-length = 120

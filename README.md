@@ -1,10 +1,13 @@
 # qasync
 
 [![Maintenance](https://img.shields.io/maintenance/yes/2023)](https://pypi.org/project/qasync)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
-[![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/qasync)](https://pypi.org/project/qasync)
-[![test](https://github.com/CabbageDevelopment/qasync/actions/workflows/test.yml/badge.svg)](https://github.com/CabbageDevelopment/qasync/actions/workflows/test.yml)
+[![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
+[![PyPI - Download](https://img.shields.io/pypi/dm/qasync)](https://pypi.org/project/qasync)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CabbageDevelopment/qasync/main.yml)](https://github.com/CabbageDevelopment/qasync/actions/workflows/main.yml)
+
+
 
 ## Introduction
 

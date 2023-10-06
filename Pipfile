@@ -4,9 +4,7 @@ name = "pypi"
 verify_ssl = true
 
 [dev-packages]
-atomicwrites = "*"
 pytest = "*"
-pytest-forked = "*"
 pytest-raises = "*"
 
 [packages]

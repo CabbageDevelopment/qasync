@@ -20,7 +20,9 @@
 
 ## Requirements
 
-`qasync` requires Python >= 3.6, and PyQt5 or PySide2.
+`qasync` requires Python >= 3.8, and PyQt5/PyQt6 or PySide2/PySide6.
+
+If you need Python 3.6 or 3.7 support, use the [v0.25.0](https://github.com/CabbageDevelopment/qasync/releases/tag/v0.25.0) tag/release.
 
 ## Installation
 

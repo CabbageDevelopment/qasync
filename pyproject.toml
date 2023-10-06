@@ -2,8 +2,13 @@
 name = "qasync"
 version = "0.24.2"
 description = "Python library for using asyncio in Qt-based applications"
-authors = ["TheGreatCabbage <github.com/TheGreatCabbage>"]
-maintainers = ["Alex March <github.com/hosaka>"]
+authors = [
+    "Arve Knudsen <arve.knudsen@gmail.com>",
+    "Gerard Marull-Paretas <gerard@teslabs.com>",
+    "Mark Harviston <mark.harviston@gmail.com>",
+    "Sam McCormack",
+]
+maintainers = ["Alex March <alexmach@fastmail.com>"]
 license = "BSD-2-Clause"
 readme = "README.md"
 homepage = "https://github.com/CabbageDevelopment/qasync"

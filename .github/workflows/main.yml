@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         os: [Ubuntu, Windows, MacOS]
-        python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
         qt-version: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
         include:
           - os: Ubuntu
@@ -30,10 +30,6 @@ jobs:
             image: windows-2022
           - os: MacOS
             image: macos-12
-        exclude:
-          - os: Windows
-            python-version: "3.6"
-            qt-version: "pyqt6"
       fail-fast: false
     defaults:
       run:

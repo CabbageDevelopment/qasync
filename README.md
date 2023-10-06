@@ -7,8 +7,6 @@
 [![PyPI - Download](https://img.shields.io/pypi/dm/qasync)](https://pypi.org/project/qasync)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CabbageDevelopment/qasync/main.yml)](https://github.com/CabbageDevelopment/qasync/actions/workflows/main.yml)
 
-
-
 ## Introduction
 
 `qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
@@ -23,7 +21,7 @@
 
 ## Requirements
 
-`qasync` requires Python >= 3.8, and PyQt5/PyQt6 or PySide2/PySide6.
+`qasync` requires Python >= 3.8, and PyQt5/PyQt6 or PySide2/PySide6. The library is tested on Ubuntu, Windows and MacOS.
 
 If you need Python 3.6 or 3.7 support, use the [v0.25.0](https://github.com/CabbageDevelopment/qasync/releases/tag/v0.25.0) tag/release.
 

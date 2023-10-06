@@ -7,10 +7,6 @@ on: [push]
 #       - master
 #       - develop
 #   pull_request:
-#     paths-ignore:
-#       - 'docs/**'
-#       - '.cirrus.yml'
-#       - '.github/workflows/docs.yml'
 #     branches:
 #       - '**'
 
@@ -28,19 +24,10 @@ jobs:
         include:
           - os: Ubuntu
             image: ubuntu-20.04
-          # - os: Windows
-          #   image: windows-2022
+          - os: Windows
+            image: windows-2022
           # - os: MacOS
           #   image: macos-12
-        # qt:
-        #   - package: PyQt5
-        #     qt_api: "pyqt5"
-        #   - package: PyQt6
-        #     qt_api: "pyqt6"
-        #   - package: PySide2
-        #     qt_api: "pyside2"
-        #   - package: PySide6
-        #     qt_api: "pyside6"
         exclude:
           - os: Windows
             python: "3.6"
@@ -81,17 +68,17 @@ jobs:
       - name: Configure poetry
         run: poetry config virtualenvs.in-project true
 
-      # - name: Setup cache
-      #   uses: actions/cache@v3
-      #   id: cache
-      #   with:
-      #     path: .venv
-      #     key: venv-${{ runner.os }}-${{ matrix.qt }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Setup cache
+        uses: actions/cache@v3
+        id: cache
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.qt }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
 
-      # - name: Valdate cache
-      #   if: steps.cache.outputs.cache-hit == 'true'
-      #   run: |
-      #     timeout 10s poetry run pip --version || rm -rf .venv
+      - name: Valdate cache
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: |
+          timeout 10s poetry run pip --version || rm -rf .venv
 
       - name: Check lock file
         run: poetry check --lock
@@ -99,17 +86,19 @@ jobs:
       - name: Install dependencies
         run: poetry install --with github-actions
 
+      # - name: Run mypy
+      #   run: poetry run mypy
+
       - name: Install Qt
         run: poetry run pip install ${{ matrix.qt}}
 
       - name: Install libxcb dependencies
         if: ${{ matrix.os == 'Ubuntu' }}
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
-
-      # - name: Run mypy
-      #   run: poetry run mypy
+          sudo apt-get -qq update
+          sudo apt-get -qq install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
 
       - name: Run pytest
         uses: coactions/setup-xvfb@v1

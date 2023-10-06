@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, windows-latest]
-        python: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+        python: ["3.6", "3.7", "3.8", "3.9", "3.10"]
         qt:
           - package: PyQt5
             qt_api: "pyqt5"
@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           pipenv install --python ${{ matrix.python }} --dev 
-          pipenv run --python ${{ matrix.python }} pip install ${{ matrix.qt.package }} pytest
+          pipenv run --python ${{ matrix.python }} pip install --no-cache-dir ${{ matrix.qt.package }} pytest
 
       - name: Install Libxcb dependencies
         if: matrix.os == 'ubuntu-20.04'

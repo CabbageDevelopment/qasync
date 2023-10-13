@@ -9,7 +9,18 @@
 
 ## Introduction
 
-`qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
+`qasync` allows coroutines to be used in PyQt/PySide applications by providing
+`class QEventLoop`, which is
+an implementation of the [PEP 3156](https://peps.python.org/pep-3156/)
+[`AbstractEventLoop`](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.AbstractEventLoop)
+and can be used in [`set_event_loop`](https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.set_event_loop).
+
+```python
+import asyncio
+import qasync
+
+asyncio.set_event_loop(qasync.QEventLoop())
+```
 
 `qasync` is a fork of [asyncqt](https://github.com/gmarull/asyncqt), which is a fork of [quamash](https://github.com/harvimt/quamash). May it live longer than its predecessors.
 

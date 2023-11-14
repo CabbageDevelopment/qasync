@@ -591,8 +591,8 @@ def test_regression_bug13(loop, sock_pair):
 
         loop._add_reader(c_sock.fileno(), cb1)
 
-    _clent_task = asyncio.ensure_future(client_coro())
-    _server_task = asyncio.ensure_future(server_coro())
+    asyncio.ensure_future(client_coro())
+    asyncio.ensure_future(server_coro())
 
     both_done = asyncio.gather(client_done, server_done)
     loop.run_until_complete(asyncio.wait_for(both_done, timeout=1.0))

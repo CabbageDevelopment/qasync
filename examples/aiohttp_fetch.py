@@ -19,8 +19,8 @@ from qasync import QEventLoop, asyncClose, asyncSlot
 class MainWindow(QWidget):
     """Main window."""
 
-    _DEF_URL = "https://jsonplaceholder.typicode.com/todos/1"
-    """str: Default URL."""
+    _DEF_URL: str = "https://jsonplaceholder.typicode.com/todos/1"
+    """Default URL."""
 
     def __init__(self):
         super().__init__()

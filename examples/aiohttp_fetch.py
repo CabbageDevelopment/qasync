@@ -1,21 +1,19 @@
 import asyncio
-import functools
 import sys
 
 import aiohttp
 
-# from PyQt5.QtWidgets import (
-from PySide2.QtWidgets import (
-    QWidget,
+# from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
+    QApplication,
     QLabel,
     QLineEdit,
-    QTextEdit,
     QPushButton,
+    QTextEdit,
     QVBoxLayout,
+    QWidget,
 )
-
-import qasync
-from qasync import asyncSlot, asyncClose, QApplication
+from qasync import QEventLoop, asyncClose, asyncSlot
 
 
 class MainWindow(QWidget):
@@ -45,17 +43,14 @@ class MainWindow(QWidget):
         self.btnFetch.clicked.connect(self.on_btnFetch_clicked)
         self.layout().addWidget(self.btnFetch)
 
-        self.session = aiohttp.ClientSession(
-            loop=asyncio.get_event_loop(),
-            timeout=aiohttp.ClientTimeout(total=self._SESSION_TIMEOUT),
-        )
+        self.session = aiohttp.ClientSession()
 
     @asyncClose
-    async def closeEvent(self, event):
+    async def closeEvent(self, event):  # noqa:N802
         await self.session.close()
 
     @asyncSlot()
-    async def on_btnFetch_clicked(self):
+    async def on_btnFetch_clicked(self):  # noqa:N802
         self.btnFetch.setEnabled(False)
         self.lblStatus.setText("Fetching...")
 
@@ -70,29 +65,23 @@ class MainWindow(QWidget):
             self.btnFetch.setEnabled(True)
 
 
-async def main():
-    def close_future(future, loop):
-        loop.call_later(10, future.cancel)
-        future.cancel()
-
-    loop = asyncio.get_event_loop()
-    future = asyncio.Future()
-
-    app = QApplication.instance()
-    if hasattr(app, "aboutToQuit"):
-        getattr(app, "aboutToQuit").connect(
-            functools.partial(close_future, future, loop)
-        )
-
-    mainWindow = MainWindow()
-    mainWindow.show()
-
-    await future
-    return True
-
-
 if __name__ == "__main__":
-    try:
-        qasync.run(main())
-    except asyncio.exceptions.CancelledError:
-        sys.exit(0)
+    app = QApplication(sys.argv)
+
+    event_loop = QEventLoop(app)
+    asyncio.set_event_loop(event_loop)
+    app_close_event = asyncio.Event()
+
+    main_window = MainWindow()
+    main_window.show()
+
+    def close_app():
+        app_close_event.set()
+
+    async def keep_app_lifecycle():
+        await app_close_event.wait()
+
+    app.aboutToQuit.connect(close_app)
+
+    event_loop.run_until_complete(keep_app_lifecycle())
+    event_loop.close()

@@ -74,12 +74,6 @@ class _IocpProactor(windows_events.IocpProactor):
         self._logger.debug("Closing")
         super(_IocpProactor, self).close()
 
-    def recv(self, conn, nbytes, flags=0):
-        return super(_IocpProactor, self).recv(conn, nbytes, flags)
-
-    def send(self, conn, buf, flags=0):
-        return super(_IocpProactor, self).send(conn, buf, flags)
-
     def _poll(self, timeout=None):
         """Override in order to handle events in a threadsafe manner."""
         if timeout is None:

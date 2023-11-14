@@ -799,5 +799,5 @@ def teardown_module(module):
     for logger in loggers:
         handlers = getattr(logger, "handlers", [])
         for handler in handlers:
-            if not isinstance(logger, logging.PlaceHolder):
+            if isinstance(logger, logging.Logger):
                 logger.removeHandler(handler)

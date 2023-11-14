@@ -22,9 +22,6 @@ class MainWindow(QWidget):
     _DEF_URL = "https://jsonplaceholder.typicode.com/todos/1"
     """str: Default URL."""
 
-    _SESSION_TIMEOUT = 1.0
-    """float: Session timeout."""
-
     def __init__(self):
         super().__init__()
 

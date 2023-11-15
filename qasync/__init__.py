@@ -740,7 +740,15 @@ class _QEventLoop:
 
 from ._unix import _SelectorEventLoop  # noqa
 
-QEventLoop = type("QSelectorEventLoop", (_QEventLoop, _SelectorEventLoop), {})
+QSelectorEventLoop = type("QSelectorEventLoop", (_QEventLoop, _SelectorEventLoop), {})
+
+if os.name == "nt":
+    from ._windows import _ProactorEventLoop
+
+    QIOCPEventLoop = type("QIOCPEventLoop", (_QEventLoop, _ProactorEventLoop), {})
+    QEventLoop = QIOCPEventLoop
+else:
+    QEventLoop = QSelectorEventLoop
 
 
 class _Cancellable:

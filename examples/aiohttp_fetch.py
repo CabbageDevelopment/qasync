@@ -40,11 +40,14 @@ class MainWindow(QWidget):
         self.btn_fetch.clicked.connect(self.on_btn_fetch_clicked)
         self.layout().addWidget(self.btn_fetch)
 
-        self.session = aiohttp.ClientSession()
+        self.session: aiohttp.ClientSession
 
     @asyncClose
     async def closeEvent(self, event):  # noqa:N802
         await self.session.close()
+
+    async def boot(self):
+        self.session = aiohttp.ClientSession()
 
     @asyncSlot()
     async def on_btn_fetch_clicked(self):
@@ -80,5 +83,6 @@ if __name__ == "__main__":
 
     app.aboutToQuit.connect(close_app)
 
+    event_loop.create_task(main_window.boot())
     event_loop.run_until_complete(keep_app_lifecycle())
     event_loop.close()

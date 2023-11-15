@@ -11,11 +11,44 @@
 
 `qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
 
-`qasync` is a fork of [asyncqt](https://github.com/gmarull/asyncqt), which is a fork of [quamash](https://github.com/harvimt/quamash). May it live longer than its predecessors.
+With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread`, `QThread`, etc. Because of Python's GIL, making your app single-threaded does not inherently make it slower, but only safer.
 
-#### The future of `qasync`
+If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is basically identical to that of `asyncio`.
 
-`qasync` was created because `asyncqt` and `quamash` are no longer maintained.
+### Basic Example
+
+```python
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setLayout(QVBoxLayout())
+
+        self.lbl_status = QLabel("Idle", self)
+        self.layout().addWidget(self.lbl_status)
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+
+    event_loop = QEventLoop(app)
+    asyncio.set_event_loop(event_loop)
+    app_close_event = asyncio.Event()
+
+    app.aboutToQuit.connect(app_close_event.set)
+    main_window = MainWindow()
+    main_window.show()
+
+    event_loop.create_task(main_window.boot())
+    event_loop.run_until_complete(asyncio.wait_for(app_close_event.wait(), None))
+    event_loop.close()
+```
+
+More detailed examples can be found [here](https://github.com/CabbageDevelopment/qasync/tree/master/examples).
+
+### The future of `qasync`
+
+`qasync` is a fork of [asyncqt](https://github.com/gmarull/asyncqt), which is a fork of [quamash](https://github.com/harvimt/quamash). `qasync` was created because those are no longer maintained. May it live longer than its predecessors.
 
 **`qasync` will continue to be maintained, and will still be accepting pull requests.**
 

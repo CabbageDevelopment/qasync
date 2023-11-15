@@ -11,7 +11,7 @@
 
 `qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
 
-With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread`, `QThread`, etc. Because of Python's GIL, making your app single-threaded does not inherently make it slower, but only safer.
+With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`. Single-threaded concurrency does not inherently make the app slower, but only safer, because of Python's GIL. The concept of single-threaded app is also adopted by Flutter and JavaScript due to its benefits.
 
 If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is basically identical to that of `asyncio`.
 

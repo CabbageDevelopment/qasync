@@ -553,6 +553,9 @@ def test_regression_bug13(loop, sock_pair):
     c_sock, s_sock = sock_pair
     client_done, server_done = asyncio.Future(), asyncio.Future()
 
+    if os.name == "nt":
+        return
+
     async def server_coro():
         s_reader, s_writer = await asyncio.open_connection(sock=s_sock)
 

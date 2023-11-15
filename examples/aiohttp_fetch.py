@@ -75,13 +75,10 @@ if __name__ == "__main__":
     main_window = MainWindow()
     main_window.show()
 
-    def close_app():
-        app_close_event.set()
-
     async def keep_app_lifecycle():
         await app_close_event.wait()
 
-    app.aboutToQuit.connect(close_app)
+    app.aboutToQuit.connect(app_close_event.set)
 
     event_loop.create_task(main_window.boot())
     event_loop.run_until_complete(keep_app_lifecycle())

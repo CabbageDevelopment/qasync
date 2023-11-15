@@ -27,18 +27,18 @@ class MainWindow(QWidget):
 
         self.setLayout(QVBoxLayout())
 
-        self.lblStatus = QLabel("Idle", self)
-        self.layout().addWidget(self.lblStatus)
+        self.lbl_status = QLabel("Idle", self)
+        self.layout().addWidget(self.lbl_status)
 
-        self.editUrl = QLineEdit(self._DEF_URL, self)
-        self.layout().addWidget(self.editUrl)
+        self.edit_url = QLineEdit(self._DEF_URL, self)
+        self.layout().addWidget(self.edit_url)
 
-        self.editResponse = QTextEdit("", self)
-        self.layout().addWidget(self.editResponse)
+        self.edit_response = QTextEdit("", self)
+        self.layout().addWidget(self.edit_response)
 
-        self.btnFetch = QPushButton("Fetch", self)
-        self.btnFetch.clicked.connect(self.on_btnFetch_clicked)
-        self.layout().addWidget(self.btnFetch)
+        self.btn_fetch = QPushButton("Fetch", self)
+        self.btn_fetch.clicked.connect(self.on_btn_fetch_clicked)
+        self.layout().addWidget(self.btn_fetch)
 
         self.session = aiohttp.ClientSession()
 
@@ -47,19 +47,19 @@ class MainWindow(QWidget):
         await self.session.close()
 
     @asyncSlot()
-    async def on_btnFetch_clicked(self):  # noqa:N802
-        self.btnFetch.setEnabled(False)
-        self.lblStatus.setText("Fetching...")
+    async def on_btn_fetch_clicked(self):
+        self.btn_fetch.setEnabled(False)
+        self.lbl_status.setText("Fetching...")
 
         try:
-            async with self.session.get(self.editUrl.text()) as r:
-                self.editResponse.setText(await r.text())
+            async with self.session.get(self.edit_url.text()) as r:
+                self.edit_response.setText(await r.text())
         except Exception as exc:
-            self.lblStatus.setText("Error: {}".format(exc))
+            self.lbl_status.setText("Error: {}".format(exc))
         else:
-            self.lblStatus.setText("Finished!")
+            self.lbl_status.setText("Finished!")
         finally:
-            self.btnFetch.setEnabled(True)
+            self.btn_fetch.setEnabled(True)
 
 
 if __name__ == "__main__":

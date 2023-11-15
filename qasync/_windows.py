@@ -125,9 +125,11 @@ class _EventWorker(QtCore.QThread):
         self.__stop = False
         self.__proactor = proactor
         self.__sig_events = parent.sig_events
+        self.__semaphore = QtCore.QSemaphore()
 
     def start(self):
         super().start()
+        self.__semaphore.acquire()
 
     def stop(self):
         self.__stop = True
@@ -136,6 +138,7 @@ class _EventWorker(QtCore.QThread):
 
     def run(self):
         self._logger.debug("Thread started")
+        self.__semaphore.release()
 
         while not self.__stop:
             events = self.__proactor.select(0.01)

@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
 More detailed examples can be found [here](https://github.com/CabbageDevelopment/qasync/tree/master/examples).
 
-### The future of `qasync`
+### The Future of `qasync`
 
 `qasync` is a fork of [asyncqt](https://github.com/gmarull/asyncqt), which is a fork of [quamash](https://github.com/harvimt/quamash). `qasync` was created because those are no longer maintained. May it live longer than its predecessors.
 

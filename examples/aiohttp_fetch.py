@@ -72,14 +72,10 @@ if __name__ == "__main__":
     asyncio.set_event_loop(event_loop)
     app_close_event = asyncio.Event()
 
+    app.aboutToQuit.connect(app_close_event.set)
     main_window = MainWindow()
     main_window.show()
 
-    async def keep_app_lifecycle():
-        await app_close_event.wait()
-
-    app.aboutToQuit.connect(app_close_event.set)
-
     event_loop.create_task(main_window.boot())
-    event_loop.run_until_complete(keep_app_lifecycle())
+    event_loop.run_until_complete(asyncio.wait_for(app_close_event.wait(), None))
     event_loop.close()

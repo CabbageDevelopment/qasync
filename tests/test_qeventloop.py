@@ -553,6 +553,14 @@ def test_regression_bug13(loop, sock_pair):
     c_sock, s_sock = sock_pair
     client_done, server_done = asyncio.Future(), asyncio.Future()
 
+    if os.name == "nt":
+        # On Windows, `loop.add_reader` and `loop.add_writer`
+        # are not supported by Python's `asyncio` due to platform limitations.
+        # Though `qasync` does provide those methods on Windows,
+        # it doesn't guarantee safety against race conditions like on Unix.
+        # https://docs.python.org/3/library/asyncio-platforms.html
+        return
+
     async def server_coro():
         s_reader, s_writer = await asyncio.open_connection(sock=s_sock)
 

@@ -71,8 +71,36 @@ class _IocpProactor(windows_events.IocpProactor):
         return tmp
 
     def close(self):
-        self._logger.debug("Closing")
-        super(_IocpProactor, self).close()
+        if self._iocp is None:
+            # already closed
+            return
+
+        # Cancel remaining registered operations.
+        for fut, ov, obj, callback in list(self._cache.values()):
+            if fut.cancelled():
+                # Nothing to do with cancelled futures
+                pass
+            elif isinstance(fut, windows_events._WaitCancelFuture):
+                # _WaitCancelFuture must not be cancelled
+                pass
+            else:
+                try:
+                    fut.cancel()
+                except OSError as exc:
+                    if self._loop is not None:
+                        context = {
+                            "message": "Cancelling a future failed",
+                            "exception": exc,
+                            "future": fut,
+                        }
+                        if fut._source_traceback:
+                            context["source_traceback"] = fut._source_traceback
+                        self._loop.call_exception_handler(context)
+
+        self._results = []
+
+        _winapi.CloseHandle(self._iocp)
+        self._iocp = None
 
     def _poll(self, timeout=None):
         """Override in order to handle events in a threadsafe manner."""

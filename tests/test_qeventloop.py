@@ -151,6 +151,8 @@ def test_can_read_subprocess(loop):
             'print("Hello async world!")',
             stdout=subprocess.PIPE,
         )
+        if process.stdout is None:
+            raise Exception("Output from the process is none")
         received_stdout = await process.stdout.readexactly(len(b"Hello async world!\n"))
         await process.wait()
         assert process.returncode == 0
@@ -597,8 +599,8 @@ def test_regression_bug13(loop, sock_pair):
 
         loop._add_reader(c_sock.fileno(), cb1)
 
-    clent_task = asyncio.ensure_future(client_coro())
-    server_task = asyncio.ensure_future(server_coro())
+    _client_task = asyncio.ensure_future(client_coro())
+    _server_task = asyncio.ensure_future(server_coro())
 
     both_done = asyncio.gather(client_done, server_done)
     loop.run_until_complete(asyncio.wait_for(both_done, timeout=1.0))
@@ -805,4 +807,5 @@ def teardown_module(module):
     for logger in loggers:
         handlers = getattr(logger, "handlers", [])
         for handler in handlers:
-            logger.removeHandler(handler)
+            if isinstance(logger, logging.Logger):
+                logger.removeHandler(handler)

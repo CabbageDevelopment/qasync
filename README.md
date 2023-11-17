@@ -11,21 +11,27 @@
 
 `qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
 
-With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`. Single-threaded concurrency does not inherently make the app slower, but only safer, because of Python's GIL. The concept of single-threaded app is also adopted by Flutter and JavaScript due to its benefits.
+With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. The concept of single-threaded app is also adopted by Flutter and JavaScript due to its benefits. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`. Single-threaded concurrency does not inherently make the app slower, but only safer, because of Python's GIL.
 
 If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is basically identical to that of `asyncio`.
 
 ### Basic Example
 
 ```python
+from qasync import QEventLoop, asyncClose, asyncSlot
+
+
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setLayout(QVBoxLayout())
+    @asyncClose
+    async def closeEvent(self, event):  # noqa:N802
+        pass
 
-        self.lbl_status = QLabel("Idle", self)
-        self.layout().addWidget(self.lbl_status)
+    @asyncSlot()
+    async def on_my_event(self):
+        pass
 
 
 if __name__ == "__main__":
@@ -33,14 +39,14 @@ if __name__ == "__main__":
 
     event_loop = QEventLoop(app)
     asyncio.set_event_loop(event_loop)
-    app_close_event = asyncio.Event()
 
+    app_close_event = asyncio.Event()
     app.aboutToQuit.connect(app_close_event.set)
+
     main_window = MainWindow()
     main_window.show()
 
-    event_loop.create_task(main_window.boot())
-    event_loop.run_until_complete(asyncio.wait_for(app_close_event.wait(), None))
+    event_loop.run_until_complete(app_close_event.wait())
     event_loop.close()
 ```
 
@@ -54,7 +60,10 @@ More detailed examples can be found [here](https://github.com/CabbageDevelopment
 
 ## Requirements
 
-`qasync` requires Python >= 3.8, and PyQt5/PyQt6 or PySide2/PySide6. The library is tested on Ubuntu, Windows and MacOS.
+- Python >= 3.8
+- PyQt5/PyQt6 or PySide2/PySide6
+
+`qasync` is tested on Ubuntu, Windows and MacOS.
 
 If you need Python 3.6 or 3.7 support, use the [v0.25.0](https://github.com/CabbageDevelopment/qasync/releases/tag/v0.25.0) tag/release.
 

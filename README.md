@@ -9,17 +9,20 @@
 
 ## Introduction
 
-`qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event-loop.
+`qasync` allows coroutines to be used in PyQt/PySide applications by providing an implementation of the `PEP 3156` event loop.
 
-With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. The concept of single-threaded app is also adopted by Flutter and JavaScript due to its benefits. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`. Single-threaded concurrency does not inherently make the app slower, but only safer, because of Python's GIL.
+With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`.
 
-If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is basically identical to that of `asyncio`.
+If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is functionally identical to that of `asyncio`.
 
 ### Basic Example
 
 ```python
-from qasync import QEventLoop, asyncClose, asyncSlot
+import sys
+import asyncio
 
+from qasync import QEventLoop, QApplication
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -39,15 +42,15 @@ if __name__ == "__main__":
 
     event_loop = QEventLoop(app)
     asyncio.set_event_loop(event_loop)
-
     app_close_event = asyncio.Event()
     app.aboutToQuit.connect(app_close_event.set)
+
 
     main_window = MainWindow()
     main_window.show()
 
-    event_loop.run_until_complete(app_close_event.wait())
-    event_loop.close()
+    with event_loop:
+        event_loop.run_until_complete(app_close_event.wait())
 ```
 
 More detailed examples can be found [here](https://github.com/CabbageDevelopment/qasync/tree/master/examples).

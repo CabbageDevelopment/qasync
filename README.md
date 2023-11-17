@@ -28,12 +28,16 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.setLayout(QVBoxLayout())
+        self.lbl_status = QLabel("Idle", self)
+        self.layout().addWidget(self.lbl_status)
+
     @asyncClose
-    async def closeEvent(self, event):  # noqa:N802
+    async def closeEvent(self, event):
         pass
 
     @asyncSlot()
-    async def on_my_event(self):
+    async def onMyEvent(self):
         pass
 
 

@@ -42,9 +42,9 @@ if __name__ == "__main__":
 
     event_loop = QEventLoop(app)
     asyncio.set_event_loop(event_loop)
+
     app_close_event = asyncio.Event()
     app.aboutToQuit.connect(app_close_event.set)
-
 
     main_window = MainWindow()
     main_window.show()

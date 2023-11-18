@@ -51,3 +51,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest]
 addopts = "-n auto"
 testpaths = ["tests"]
+
+[tool.pytest.ini_options]
+markers = ["raises"]

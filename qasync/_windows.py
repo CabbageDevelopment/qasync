@@ -140,15 +140,13 @@ class _IocpProactor(windows_events.IocpProactor):
             if ms >= UINT32_MAX:
                 raise ValueError("timeout too big")
 
-        with QtCore.QMutexLocker(self._lock):
-            while True:
-                # self._logger.debug('Polling IOCP with timeout {} ms in thread {}...'.format(
-                #     ms, threading.get_ident()))
-                status = _overlapped.GetQueuedCompletionStatus(self._iocp, ms)
-                if status is None:
-                    break
-                ms = 0
+        while True:
+            status = _overlapped.GetQueuedCompletionStatus(self._iocp, ms)
+            if status is None:
+                break
+            ms = 0
 
+            with QtCore.QMutexLocker(self._lock):
                 err, transferred, key, address = status
                 try:
                     f, ov, obj, callback = self._cache.pop(address)

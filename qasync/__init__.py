@@ -226,6 +226,13 @@ class QThreadExecutor:
         self.shutdown()
 
 
+def _format_handle(handle: asyncio.Handle):
+    cb = getattr(handle, "_callback", None)
+    if isinstance(getattr(cb, '__self__', None), asyncio.tasks.Task):
+        return repr(cb.__self__)
+    return str(handle)
+
+
 def _make_signaller(qtimpl_qtcore, *args):
     class Signaller(qtimpl_qtcore.QObject):
         try:
@@ -268,8 +275,22 @@ class _SimpleTimer(QtCore.QObject):
                 if handle._cancelled:
                     self.__log_debug("Handle %s cancelled", handle)
                 else:
-                    self.__log_debug("Calling handle %s", handle)
-                    handle._run()
+                    if self.__debug_enabled:
+                        # This may not be the most efficient thing to do, but it removes the need to sync
+                        # "slow_callback_duration" and "_current_handle" variables
+                        loop = asyncio.get_event_loop()
+                        try:
+                            loop._current_handle = handle
+                            self._logger.debug("Calling handle %s", handle)
+                            t0 = time.time()
+                            handle._run()
+                            dt = time.time() - t0
+                            if dt >= loop.slow_callback_duration:
+                                self._logger.warning('Executing %s took %.3f seconds', _format_handle(handle), dt)
+                        finally:
+                            loop._current_handle = None
+                    else:
+                        handle._run()
             finally:
                 del self.__callbacks[timerid]
                 handle = None

@@ -323,10 +323,11 @@ class _CallSoonQueue(QtCore.QObject):
         # Use a deque instead of Queue, as we don't require
         # synchronization between threads here.
         self.__callbacks = deque()
-        # Set a 0-delay timer on itself, this will ensure that
-        # timerEvent gets fired each time after window events are processed
-        # See https://doc.qt.io/qt-6/qtimer.html#interval-prop
-        self.__timerId = self.startTimer(0)
+
+        # Keep track of the current timer.
+        # The queue can only have a single timer that services it.
+        # Once fired, all pending callbacks will be processed.
+        self.__timer_id = None
         self.__stopped = False
         self.__debug_enabled = False
 
@@ -334,18 +335,29 @@ class _CallSoonQueue(QtCore.QObject):
         # handle must be an asyncio.Handle
         self.__callbacks.append(handle)
         self.__log_debug("Registering call_soon handle %s", id(handle))
+
+        # Create a timer if it doesn't yet exist
+        if self.__timer_id is None:
+            # Set a 0-delay timer on itself, this will ensure thats
+            # it gets fired immediately after window events are processed the next time.
+            # See https://doc.qt.io/qt-6/qtimer.html#interval-prop
+            self.__timer_id = self.startTimer(0)
+            self.__log_debug("Registering call_soon timer %s", self.__timer_id)
         return handle
 
     def timerEvent(self, event):
         timerId = event.timerId()
-        assert timerId == self.__timerId
+        # We should have only one timer active at the same time, so
+        # this assert will get hit only when something's very bad
+        assert timerId == self.__timer_id
 
         # Stop timer if stopped
         if self.__stopped:
-            self.killTimer(timerId)
             self.__log_debug("call_soon queue stopped, clearing handles")
             # TODO: Do we need to del the handles or somehow invalidate them?
             self.__callbacks.clear()
+            self.killTimer(timerId)
+            self.__timer_id = None
             return
 
         # Iterate over pending callbacks
@@ -354,6 +366,15 @@ class _CallSoonQueue(QtCore.QObject):
             handle = self.__callbacks.popleft()
             self.__log_debug("Calling call_soon handle %s", id(handle))
             handle._run()
+
+        # No more callbacks exist, we can dispose this timer.
+        # It will be recreated once a callback is registered again.
+        # It's should be safe to assume that another thread isn't calling
+        # add_callback during the lifetime of timerEvent
+        self.__log_debug("Stopping call_soon timer %s", timerId)
+        self.killTimer(timerId)
+        self.__timer_id = None
+        assert len(self.__callbacks) == 0
 
     def stop(self):
         self.__log_debug("Stopping call_soon queue")

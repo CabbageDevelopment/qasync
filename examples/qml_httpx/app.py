@@ -2,9 +2,9 @@ import sys
 import asyncio
 from pathlib import Path
 
-from qasync import QEventLoop, QApplication
 from PySide6.QtCore import QUrl
 from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
+from qasync import QEventLoop, QApplication
 
 from service import ExampleService
 

@@ -21,8 +21,8 @@ If you need some CPU-intensive tasks to be executed in parallel, `qasync` also g
 import sys
 import asyncio
 
-from qasync import QEventLoop, QApplication
 from PySide6.QtWidgets import QWidget, QVBoxLayout
+from qasync import QEventLoop, QApplication
 
 class MainWindow(QWidget):
     def __init__(self):

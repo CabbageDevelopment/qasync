@@ -1,6 +1,13 @@
 """
 Implementation of the PEP 3156 Event-Loop with Qt.
 
+This package is originally at https://github.com/CabbageDevelopment/qasync,
+licensed under the BSD license;
+It is modified since the original was unmaintained for two years.  References
+to Event Loop Policies was removed, since it's scheduled to be deprecated in
+Python 3.16.
+
+Copyright (c) 2025 Xinyuan Zhou <johnzhou721@gmail.com>
 Copyright (c) 2018 Gerard Marull-Paretas <gerard@teslabs.com>
 Copyright (c) 2014 Mark Harviston <mark.harviston@gmail.com>
 Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
@@ -13,6 +20,7 @@ __author__ = (
     "Gerard Marull-Paretas <gerard@teslabs.com>, "
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
+    "Xinyuan Zhou <johnzhou721@gmail.com>",
 )
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
 
@@ -812,29 +820,23 @@ def asyncSlot(*args, **kwargs):
 
     return outer_decorator
 
-
-class QEventLoopPolicyMixin:
-    def new_event_loop(self):
-        return QEventLoop(QApplication.instance() or QApplication(sys.argv))
-
-
-class DefaultQEventLoopPolicy(
-    QEventLoopPolicyMixin,
-    asyncio.DefaultEventLoopPolicy,
-):
-    pass
-
-
 @contextlib.contextmanager
-def _set_event_loop_policy(policy):
-    old_policy = asyncio.get_event_loop_policy()
-    asyncio.set_event_loop_policy(policy)
+def _use_qeventloop():
+    app = QApplication.instance() or QApplication([])
+    loop = QEventLoop(app)
+    old_loop = asyncio.get_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        yield
+        yield loop
     finally:
-        asyncio.set_event_loop_policy(old_policy)
+        loop.close()
+        asyncio.set_event_loop(old_loop)
 
 
-def run(*args, **kwargs):
-    with _set_event_loop_policy(DefaultQEventLoopPolicy()):
-        return asyncio.run(*args, **kwargs)
+def run(main, *args, **kwargs):
+    """
+    Run the given coroutine using a QEventLoop without setting a global policy.
+    """
+    with _use_qeventloop() as loop:
+        return loop.run_until_complete(main(*args, **kwargs))
+

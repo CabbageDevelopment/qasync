@@ -49,7 +49,7 @@ jobs:
 
       - name: Bootstrap poetry
         run: |
-          curl -sSL https://install.python-poetry.org | python - -y
+          curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python - -y
 
       - name: Update Path
         if: ${{ matrix.os != 'Windows' }}

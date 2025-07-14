@@ -342,7 +342,9 @@ class _QEventLoop:
 
         self.__call_soon_signaller = signaller = _make_signaller(QtCore, object, tuple)
         self.__call_soon_signal = signaller.signal
-        signaller.signal.connect(lambda callback, args: self.call_soon(callback, *args))
+        self.__call_soon_signal.connect(
+            lambda callback, args: self.call_soon(callback, *args)
+        )
 
         assert self.__app is not None
         super().__init__()
@@ -438,6 +440,9 @@ class _QEventLoop:
         if self.__default_executor is not None:
             self.__default_executor.shutdown()
 
+        if self.__call_soon_signal:
+            self.__call_soon_signal.disconnect()
+
         super().close()
 
         self._timer.stop()
@@ -524,6 +529,7 @@ class _QEventLoop:
             return False
         else:
             notifier.setEnabled(False)
+            notifier.activated["int"].disconnect()
             return True
 
     def _add_writer(self, fd, callback, *args):
@@ -564,6 +570,7 @@ class _QEventLoop:
             return False
         else:
             notifier.setEnabled(False)
+            notifier.activated["int"].disconnect()
             return True
 
     def __notifier_cb_wrapper(self, notifiers, notifier, fd, callback, args):
@@ -579,8 +586,6 @@ class _QEventLoop:
             # callback. We must not re-enable it in that case.
             if notifiers.get(fd, None) is notifier:
                 notifier.setEnabled(True)
-            else:
-                notifier.activated["int"].disconnect()
 
     def __on_notifier_ready(self, notifiers, notifier, fd, callback, args):
         if fd not in notifiers:

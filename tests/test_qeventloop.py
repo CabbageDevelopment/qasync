@@ -4,18 +4,18 @@
 # BSD License
 
 import asyncio
-import logging
-import sys
-import os
 import ctypes
+import logging
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import os
 import socket
 import subprocess
-
-import qasync
+import sys
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import pytest
+
+import qasync
 
 
 @pytest.fixture

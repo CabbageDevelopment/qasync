@@ -1,13 +1,6 @@
 """
 Implementation of the PEP 3156 Event-Loop with Qt.
 
-This package is originally at https://github.com/CabbageDevelopment/qasync,
-licensed under the BSD license;
-It is modified since the original was unmaintained for two years.  References
-to Event Loop Policies was removed, since it's scheduled to be deprecated in
-Python 3.16.
-
-Copyright (c) 2025 Xinyuan Zhou <johnzhou721@gmail.com>
 Copyright (c) 2018 Gerard Marull-Paretas <gerard@teslabs.com>
 Copyright (c) 2014 Mark Harviston <mark.harviston@gmail.com>
 Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
@@ -20,7 +13,6 @@ __author__ = (
     "Gerard Marull-Paretas <gerard@teslabs.com>, "
     "Mark Harviston <mark.harviston@gmail.com>, "
     "Arve Knudsen <arve.knudsen@gmail.com>",
-    "Xinyuan Zhou <johnzhou721@gmail.com>",
 )
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
 

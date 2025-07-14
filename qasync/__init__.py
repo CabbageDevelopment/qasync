@@ -814,7 +814,7 @@ def asyncSlot(*args, **kwargs):
 
 @contextlib.contextmanager
 def _use_qeventloop():
-    app = QApplication.instance() or QApplication([])
+    app = QApplication.instance() or QApplication([sys.argv])
     loop = QEventLoop(app)
     old_loop = asyncio.get_event_loop()
     asyncio.set_event_loop(loop)
@@ -825,10 +825,10 @@ def _use_qeventloop():
         asyncio.set_event_loop(old_loop)
 
 
-def run(main, *args, **kwargs):
+def run(future):
     """
-    Run the given coroutine using a QEventLoop without setting a global policy.
+    Run the given coroutine using a QEventLoop.
     """
     with _use_qeventloop() as loop:
-        return loop.run_until_complete(main(*args, **kwargs))
+        return loop.run_until_complete(future)
 

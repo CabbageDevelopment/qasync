@@ -1,7 +1,7 @@
 import httpx
 
-from qasync import asyncSlot
 from PySide6.QtCore import QObject, Signal, Property, Slot
+from qasync import asyncSlot
 
 
 class ExampleService(QObject):

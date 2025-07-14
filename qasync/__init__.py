@@ -813,9 +813,12 @@ def asyncSlot(*args, **kwargs):
     return outer_decorator
 
 @contextlib.contextmanager
-def _use_qeventloop():
+def _use_qeventloop(loop_factory):
     app = QApplication.instance() or QApplication([sys.argv])
-    loop = QEventLoop(app)
+    if loop_factory is None:
+        loop = QEventLoop(app)
+    else:
+        loop = loop_factory(app)
     old_loop = asyncio.get_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -824,11 +827,12 @@ def _use_qeventloop():
         loop.close()
         asyncio.set_event_loop(old_loop)
 
-
-def run(future):
+# A run function matching the signature of asyncio.run
+def run(main_coro, *, debug=None, loop_factory=None):
     """
     Run the given coroutine using a QEventLoop.
     """
-    with _use_qeventloop() as loop:
-        return loop.run_until_complete(future)
-
+    with _use_qeventloop(loop_factory) as loop:
+        if debug is not None:
+            loop.set_debug(debug)
+        return loop.run_until_complete(main_coro)

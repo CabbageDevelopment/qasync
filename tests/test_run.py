@@ -15,4 +15,4 @@ def test_run_with_contextmanager(application):
         event_loop = asyncio.get_event_loop()
     except:
         event_loop = None
-    assert type(event_loop).__name__ != "QSelectorEventLoop"
+    assert type(event_loop).__name__ != "QIOCPEventLoop" if os.name == 'nt' else "QSelectorEventLoop"

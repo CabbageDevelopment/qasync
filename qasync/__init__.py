@@ -833,8 +833,7 @@ def _use_qeventloop(loop_factory):
         yield loop
     finally:
         loop.close()
-        if old_loop is not None:
-            asyncio.set_event_loop(old_loop)
+        asyncio.set_event_loop(old_loop)
 
 # A run function matching the signature of asyncio.run
 def run(main_coro, *, debug=None, loop_factory=None):

@@ -29,9 +29,9 @@ jobs:
             image: windows-2022
           - os: MacOS
             image: macos-14
-        exclude:
           - os: MacOS
             qt-version: pyside2
+            image: macos-13
       fail-fast: false
     defaults:
       run:

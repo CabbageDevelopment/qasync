@@ -19,16 +19,30 @@ jobs:
     runs-on: ${{ matrix.image }}
     strategy:
       matrix:
-        os: [Ubuntu, Windows, MacOS]
-        python-version: ["3.8", "3.9", "3.10"]
+        os: [ubuntu, windows, macos-x86_64, macos-arm64]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
         qt-version: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
         include:
-          - os: Ubuntu
+          - os: ubuntu
             image: ubuntu-24.04
-          - os: Windows
+          - os: windows
             image: windows-2022
-          - os: MacOS
+          - os: macos-x86_64
+            image: macos-13
+          - os: macos-arm64
             image: macos-14
+        exclude:
+          # pyside2 does not publish arm64 packages
+          - os: macos-arm64
+            qt-version: pyside2
+          # pyside2 requires python <3.11
+          - python-version: "3.11"
+            qt-version: pyside2
+          # pyside6 and pyqt6 require python >=3.9
+          - python-version: "3.8"
+            qt-version: pyside6
+          - python-version: "3.8"
+            qt-version: pyqt6
       fail-fast: false
     defaults:
       run:
@@ -52,15 +66,15 @@ jobs:
           curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python - -y
 
       - name: Update Path
-        if: ${{ matrix.os != 'Windows' }}
+        if: ${{ matrix.os != 'windows' }}
         run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Update Path for Windows
-        if: ${{ matrix.os == 'Windows' }}
+        if: ${{ matrix.os == 'windows' }}
         run: echo "$APPDATA\Python\Scripts" >> $GITHUB_PATH
 
       - name: Enable long paths on Windows
-        if: ${{ matrix.os == 'Windows' }}
+        if: ${{ matrix.os == 'windows' }}
         run: git config --system core.longpaths true
 
       - name: Configure poetry
@@ -76,7 +90,7 @@ jobs:
       - name: Valdate cache
         if: steps.cache.outputs.cache-hit == 'true'
         run: |
-          # `timeout` is not available on macOS, so we define a custom function.
+          # `timeout` is not available on macos, so we define a custom function.
           [ "$(command -v timeout)" ] || function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
 
           # Using `timeout` is a safeguard against the Poetry command hanging for some reason.
@@ -92,10 +106,10 @@ jobs:
       #   run: poetry run mypy
 
       - name: Install Qt
-        run: poetry run pip install ${{ matrix.qt-version }}
+        run: poetry run pip install --ignore-installed ${{ matrix.qt-version }}
 
       - name: Install libxcb dependencies
-        if: ${{ matrix.os == 'Ubuntu' }}
+        if: ${{ matrix.os == 'ubuntu' }}
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |

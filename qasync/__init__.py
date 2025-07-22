@@ -824,7 +824,10 @@ def _use_qeventloop(loop_factory):
         loop = QEventLoop(app)
     else:
         loop = loop_factory(app)
-    old_loop = asyncio.get_event_loop()
+    try:
+        old_loop = asyncio.get_event_loop()
+    except RuntimeError:  # No current event loop
+        old_loop = None
     asyncio.set_event_loop(loop)
     try:
         yield loop

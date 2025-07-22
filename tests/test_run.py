@@ -1,5 +1,6 @@
 import qasync
 import asyncio
+from qasync import QApplication
 
 def test_run_with_contextmanager(application):
     async def coro():
@@ -7,8 +8,10 @@ def test_run_with_contextmanager(application):
         assert type(event_loop).__name__ == "QSelectorEventLoop"
         await asyncio.sleep(0)
 
-    _ = application
     qasync.run(coro())
 
-    event_loop = asyncio.get_event_loop()
+    try:
+        event_loop = asyncio.get_event_loop()
+    except:
+        event_loop = None
     assert type(event_loop).__name__ != "QSelectorEventLoop"

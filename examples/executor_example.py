@@ -34,8 +34,4 @@ def last_50(progress, loop):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    event_loop = QEventLoop(app)
-    asyncio.set_event_loop(event_loop)
-
-    event_loop.run_until_complete(master())
-    event_loop.close()
+    asyncio.run(master(), loop_factory=lambda:QEventLoop(app))

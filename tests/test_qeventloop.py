@@ -4,18 +4,18 @@
 # BSD License
 
 import asyncio
-import logging
-import sys
-import os
 import ctypes
+import logging
 import multiprocessing
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import os
 import socket
 import subprocess
-
-import qasync
+import sys
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import pytest
+
+import qasync
 
 
 @pytest.fixture
@@ -587,6 +587,7 @@ def test_regression_bug13(loop, sock_pair):
             nonlocal result3
             assert result3 is None
             result3 = c_sock.recv(1)
+            loop._remove_reader(c_sock.fileno())
             client_done.set_result(True)
 
         loop._add_reader(c_sock.fileno(), cb1)

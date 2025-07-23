@@ -1,6 +1,6 @@
 # qasync
 
-[![Maintenance](https://img.shields.io/maintenance/yes/2023)](https://pypi.org/project/qasync)
+[![Maintenance](https://img.shields.io/maintenance/yes/2025)](https://pypi.org/project/qasync)
 [![PyPI](https://img.shields.io/pypi/v/qasync)](https://pypi.org/project/qasync)
 [![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
@@ -13,16 +13,18 @@
 
 With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`.
 
-If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is functionally identical to that of `asyncio`.
+If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is functionally identical to that of `asyncio`. By default `QThreadExecutor` is used, but any class implementing the `concurrent.futures.Executor` interface will do the job.
 
 ### Basic Example
 
 ```python
-import sys
 import asyncio
+import sys
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout
-from qasync import QEventLoop, QApplication
+from PySide6.QtWidgets import QVBoxLayout, QWidget
+
+from qasync import QApplication, QEventLoop
+
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -67,7 +69,7 @@ More detailed examples can be found [here](https://github.com/CabbageDevelopment
 
 ## Requirements
 
-- Python >= 3.8
+- Python >=3.8, <3.14
 - PyQt5/PyQt6 or PySide2/PySide6
 
 `qasync` is tested on Ubuntu, Windows and MacOS.

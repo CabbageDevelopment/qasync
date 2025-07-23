@@ -1,12 +1,13 @@
 [tool.poetry]
 name = "qasync"
-version = "0.27.1"
+version = "0.27.2"
 description = "Python library for using asyncio in Qt-based applications"
 authors = [
-    "Arve Knudsen <arve.knudsen@gmail.com>",
-    "Gerard Marull-Paretas <gerard@teslabs.com>",
-    "Mark Harviston <mark.harviston@gmail.com>",
-    "Sam McCormack",
+  "Arve Knudsen <arve.knudsen@gmail.com>",
+  "Gerard Marull-Paretas <gerard@teslabs.com>",
+  "Mark Harviston <mark.harviston@gmail.com>",
+  "Alex March <alexmarch@fastmail.com>",
+  "Sam McCormack",
 ]
 maintainers = ["Alex March <alexmach@fastmail.com>"]
 license = "BSD-2-Clause"
@@ -15,25 +16,37 @@ homepage = "https://github.com/CabbageDevelopment/qasync"
 repository = "https://github.com/CabbageDevelopment/qasync"
 keywords = ["Qt", "asncio"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: X11 Applications :: Qt",
-    "Intended Audience :: Developers",
-    "Operating System :: MacOS",
-    "Operating System :: Microsoft",
-    "Operating System :: POSIX",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: X11 Applications :: Qt",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.8, <3.14"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.21"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^7.4"
-pytest-cov = "^4.1"
-pytest-xdist = { version = "^3.3", extras = ["psutil"] }
+pytest = [
+  { version = "^7.4", python = "<3.9" },
+  { version = "^8.4", python = ">=3.9" },
+]
+pytest-cov = [
+  { version = "^4.1", python = "<3.9" },
+  { version = "^6.2", python = ">=3.9" },
+]
+pytest-xdist = [
+  { version = "^3.3", extras = [ "psutil", ], python = "<3.9" },
+  { version = "^3.8", extras = [ "psutil", ], python = ">=3.9" },
+]
 
 [tool.poetry.group.typing.dependencies]
 mypy = ">=1.0"
@@ -48,9 +61,7 @@ pytest-github-actions-annotate-failures = "^0.1.7"
 requires = ["poetry-core>=1.5.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.pytest]
-addopts = "-n auto"
-testpaths = ["tests"]
-
 [tool.pytest.ini_options]
+addopts = "-n auto"
 markers = ["raises"]
+testpaths = ["tests"]

@@ -331,11 +331,8 @@ class _QEventLoop:
     ...     assert x + y == 4
     ...     await asyncio.sleep(.1)
     >>>
-    >>> loop = QEventLoop(app)
-    >>> asyncio.set_event_loop(loop)
-    >>> with loop:
-    ...     loop.run_until_complete(xplusy(2, 2))
-
+    >>> asyncio.run(xplusy(2, 2), loop_factory=lambda:QEventLoop(app))
+    
     If the event loop shall be used with an existing and already running QApplication
     it must be specified in the constructor via already_running=True
     In this case the user is responsible for loop cleanup with stop() and close()

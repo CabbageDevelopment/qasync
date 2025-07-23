@@ -1,23 +1,24 @@
-# © 2018 Gerard Marull-Paretas <gerard@teslabs.com>
-# © 2014 Mark Harviston <mark.harviston@gmail.com>
-# © 2014 Arve Knudsen <arve.knudsen@gmail.com>
-# BSD License
+"""
+UNIX specific qasync functionality.
 
-"""UNIX specific Quamash functionality."""
+Copyright (c) 2018 Gerard Marull-Paretas <gerard@teslabs.com>
+Copyright (c) 2014 Mark Harviston <mark.harviston@gmail.com>
+Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
+
+BSD License
+"""
 
 import asyncio
-import selectors
 import collections
+import selectors
 
-from . import QtCore, with_logger, _fileno
-
+from . import QtCore, _fileno, with_logger
 
 EVENT_READ = 1 << 0
 EVENT_WRITE = 1 << 1
 
 
 class _SelectorMapping(collections.abc.Mapping):
-
     """Mapping of file objects to selector keys."""
 
     def __init__(self, selector):

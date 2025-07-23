@@ -69,7 +69,7 @@ More detailed examples can be found [here](https://github.com/CabbageDevelopment
 
 ## Requirements
 
-- Python >=3.8, <3.13
+- Python >=3.8, <3.14
 - PyQt5/PyQt6 or PySide2/PySide6
 
 `qasync` is tested on Ubuntu, Windows and MacOS.

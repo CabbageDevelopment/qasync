@@ -8,12 +8,6 @@ Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
 BSD License
 """
 
-__author__ = (
-    "Sam McCormack",
-    "Gerard Marull-Paretas <gerard@teslabs.com>, "
-    "Mark Harviston <mark.harviston@gmail.com>, "
-    "Arve Knudsen <arve.knudsen@gmail.com>",
-)
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
 
 import asyncio
@@ -39,11 +33,10 @@ if qtapi_env:
     env_to_mod_map = {
         "pyqt5": "PyQt5",
         "pyqt6": "PyQt6",
-        "pyqt": "PyQt4",
-        "pyqt4": "PyQt4",
+        "pyqt": "PyQt6",
         "pyside6": "PySide6",
         "pyside2": "PySide2",
-        "pyside": "PySide",
+        "pyside": "PySide6",
     }
     if qtapi_env in env_to_mod_map:
         QtModuleName = env_to_mod_map[qtapi_env]

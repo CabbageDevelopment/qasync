@@ -1,17 +1,20 @@
-# © 2018 Gerard Marull-Paretas <gerard@teslabs.com>
-# © 2014 Mark Harviston <mark.harviston@gmail.com>
-# © 2014 Arve Knudsen <arve.knudsen@gmail.com>
-# BSD License
+"""
+Windows specific qasync functionality.
 
-"""Windows specific Quamash functionality."""
+Copyright (c) 2018 Gerard Marull-Paretas <gerard@teslabs.com>
+Copyright (c) 2014 Mark Harviston <mark.harviston@gmail.com>
+Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
+
+BSD License
+"""
 
 import asyncio
 import sys
 
 try:
+    import _overlapped
     import _winapi
     from asyncio import windows_events
-    import _overlapped
 except ImportError:  # noqa
     pass  # w/o guarding this import py.test can't gather doctests on platforms w/o _winapi
 
@@ -24,7 +27,6 @@ UINT32_MAX = 0xFFFFFFFF
 
 
 class _ProactorEventLoop(asyncio.ProactorEventLoop):
-
     """Proactor based event loop."""
 
     def __init__(self):
@@ -203,7 +205,6 @@ class _EventWorker(QtCore.QThread):
 
 @with_logger
 class _EventPoller:
-
     """Polling of events in separate thread."""
 
     def __init__(self, sig_events):

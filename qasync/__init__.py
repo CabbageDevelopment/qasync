@@ -8,12 +8,6 @@ Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
 BSD License
 """
 
-__author__ = (
-    "Sam McCormack",
-    "Gerard Marull-Paretas <gerard@teslabs.com>, "
-    "Mark Harviston <mark.harviston@gmail.com>, "
-    "Arve Knudsen <arve.knudsen@gmail.com>",
-)
 __all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
 
 import asyncio

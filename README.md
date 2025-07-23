@@ -1,6 +1,6 @@
 # qasync
 
-[![Maintenance](https://img.shields.io/maintenance/yes/2023)](https://pypi.org/project/qasync)
+[![Maintenance](https://img.shields.io/maintenance/yes/2025)](https://pypi.org/project/qasync)
 [![PyPI](https://img.shields.io/pypi/v/qasync)](https://pypi.org/project/qasync)
 [![PyPI - License](https://img.shields.io/pypi/l/qasync)](/LICENSE)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/qasync)](https://pypi.org/project/qasync)
@@ -18,11 +18,13 @@ If you need some CPU-intensive tasks to be executed in parallel, `qasync` also g
 ### Basic Example
 
 ```python
-import sys
 import asyncio
+import sys
 
-from qasync import QEventLoop, QApplication
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout, QWidget
+
+from qasync import QApplication, QEventLoop
+
 
 class MainWindow(QWidget):
     def __init__(self):

@@ -6,6 +6,7 @@ authors = [
   "Arve Knudsen <arve.knudsen@gmail.com>",
   "Gerard Marull-Paretas <gerard@teslabs.com>",
   "Mark Harviston <mark.harviston@gmail.com>",
+  "Alex March <alexmarch@fastmail.com>",
   "Sam McCormack",
 ]
 maintainers = ["Alex March <alexmach@fastmail.com>"]
@@ -15,17 +16,20 @@ homepage = "https://github.com/CabbageDevelopment/qasync"
 repository = "https://github.com/CabbageDevelopment/qasync"
 keywords = ["Qt", "asncio"]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 5 - Production/Stable",
   "Environment :: X11 Applications :: Qt",
   "Intended Audience :: Developers",
   "Operating System :: MacOS",
+  "Operating System :: MacOS :: MacOS X",
   "Operating System :: Microsoft",
+  "Operating System :: Microsoft :: Windows",
   "Operating System :: POSIX",
+  "Operating System :: POSIX :: Linux",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.8, <3.12"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.21"
@@ -48,9 +52,7 @@ pytest-github-actions-annotate-failures = "^0.1.7"
 requires = ["poetry-core>=1.5.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.pytest]
-addopts = "-n auto"
-testpaths = ["tests"]
-
 [tool.pytest.ini_options]
+addopts = "-n auto"
 markers = ["raises"]
+testpaths = ["tests"]

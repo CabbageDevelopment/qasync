@@ -46,17 +46,13 @@ class MainWindow(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    event_loop = QEventLoop(app)
-    asyncio.set_event_loop(event_loop)
-
     app_close_event = asyncio.Event()
     app.aboutToQuit.connect(app_close_event.set)
 
     main_window = MainWindow()
     main_window.show()
 
-    with event_loop:
-        event_loop.run_until_complete(app_close_event.wait())
+    asyncio.run(app_close_event.wait(), loop_factory=lambda:QEventLoop(app))
 ```
 
 More detailed examples can be found [here](https://github.com/CabbageDevelopment/qasync/tree/master/examples).

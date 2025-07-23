@@ -452,6 +452,7 @@ class _QEventLoop:
             self._read_notifiers.values(), self._write_notifiers.values()
         ):
             notifier.setEnabled(False)
+            notifier.activated["int"].disconnect()
 
         self._read_notifiers = None
         self._write_notifiers = None
@@ -596,6 +597,7 @@ class _QEventLoop:
                 callback,
             )
             notifier.setEnabled(False)
+            notifier.activated["int"].disconnect()
             return
 
         # It can be necessary to disable QSocketNotifier when e.g. checking

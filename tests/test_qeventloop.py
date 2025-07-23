@@ -587,6 +587,7 @@ def test_regression_bug13(loop, sock_pair):
             nonlocal result3
             assert result3 is None
             result3 = c_sock.recv(1)
+            loop._remove_reader(c_sock.fileno())
             client_done.set_result(True)
 
         loop._add_reader(c_sock.fileno(), cb1)

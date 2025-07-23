@@ -792,6 +792,23 @@ def test_not_running_immediately_after_stopped(loop):
     assert not loop.is_running()
 
 
+def test_call_sync(loop):
+    """Verify that call_sync works as expected."""
+    called = False
+
+    def sync_callback():
+        nonlocal called
+        called = True
+        return 1
+
+    async def main():
+        res = await qasync.call_sync(sync_callback)
+        assert res == 1
+        
+    loop.run_until_complete(main())
+    assert called, "The sync callback should have been called"
+
+
 def test_slow_callback_duration_logging(loop, caplog):
     async def mycoro():
         time.sleep(1)

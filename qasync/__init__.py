@@ -8,7 +8,7 @@ Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
 BSD License
 """
 
-__all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose"]
+__all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose", "call_sync"]
 
 import asyncio
 import contextlib
@@ -833,6 +833,22 @@ def asyncSlot(*args, **kwargs):
 
     return outer_decorator
 
+async def call_sync(fn, *args, **kwargs):
+    """run a blocking call from the Qt event loop."""
+    future = asyncio.Future()
+
+    @functools.wraps(fn)
+    def helper():
+        try:
+            result = fn(*args, **kwargs)
+        except Exception as e:
+            future.set_exception(e)
+        else:
+            future.set_result(result)
+
+    # Schedule the helper to run in the next event loop iteration
+    QtCore.QTimer.singleShot(0, helper)
+    return await future
 
 class QEventLoopPolicyMixin:
     def new_event_loop(self):

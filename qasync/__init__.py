@@ -830,29 +830,30 @@ def asyncSlot(*args, **kwargs):
 
     return outer_decorator
 
-
-class QEventLoopPolicyMixin:
-    def new_event_loop(self):
-        return QEventLoop(QApplication.instance() or QApplication(sys.argv))
-
-
-class DefaultQEventLoopPolicy(
-    QEventLoopPolicyMixin,
-    asyncio.DefaultEventLoopPolicy,
-):
-    pass
-
-
 @contextlib.contextmanager
-def _set_event_loop_policy(policy):
-    old_policy = asyncio.get_event_loop_policy()
-    asyncio.set_event_loop_policy(policy)
+def _use_qeventloop(loop_factory):
+    app = QApplication.instance() or QApplication([sys.argv])
+    if loop_factory is None:
+        loop = QEventLoop(app)
+    else:
+        loop = loop_factory(app)
     try:
-        yield
+        old_loop = asyncio.get_event_loop()
+    except RuntimeError:  # No current event loop
+        old_loop = None
+    asyncio.set_event_loop(loop)
+    try:
+        yield loop
     finally:
-        asyncio.set_event_loop_policy(old_policy)
+        loop.close()
+        asyncio.set_event_loop(None)
 
-
-def run(*args, **kwargs):
-    with _set_event_loop_policy(DefaultQEventLoopPolicy()):
-        return asyncio.run(*args, **kwargs)
+# A run function matching the signature of asyncio.run
+def run(main_coro, *, debug=None, loop_factory=None):
+    """
+    Run the given coroutine using a QEventLoop.
+    """
+    with _use_qeventloop(loop_factory) as loop:
+        if debug is not None:
+            loop.set_debug(debug)
+        return loop.run_until_complete(main_coro)

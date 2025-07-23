@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu, windows, macos-x86_64, macos-arm64]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         qt-version: ["pyside2", "pyside6", "pyqt5", "pyqt6"]
         include:
           - os: ubuntu
@@ -37,6 +37,8 @@ jobs:
             qt-version: pyside2
           # pyside2 requires python <3.11
           - python-version: "3.11"
+            qt-version: pyside2
+          - python-version: "3.12"
             qt-version: pyside2
           # pyside6 and pyqt6 require python >=3.9
           - python-version: "3.8"

@@ -13,7 +13,7 @@
 
 With `qasync`, you can use `asyncio` functionalities directly inside Qt app's event loop, in the main thread. Using async functions for Python tasks can be much easier and cleaner than using `threading.Thread` or `QThread`.
 
-If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is functionally identical to that of `asyncio`.
+If you need some CPU-intensive tasks to be executed in parallel, `qasync` also got that covered, providing `QEventLoop.run_in_executor` which is functionally identical to that of `asyncio`. By default `QThreadExecutor` is used, but any class implementing the `concurrent.futures.Executor` interface will do the job.
 
 ### Basic Example
 

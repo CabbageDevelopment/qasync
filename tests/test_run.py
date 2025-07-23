@@ -25,7 +25,8 @@ def test_run_with_contextmanager(get_event_loop_coro):
     with pytest.raises(RuntimeError):
         _ = asyncio.get_event_loop()
 
-def test_run_with_existing_eventloop(get_event_loop_coro, expected_loop):
-    asyncio.set_event_loop(asyncio.new_event_loop())
+def test_run_reset_policy(get_event_loop_coro, expected_loop):
+    old_loop = asyncio.new_event_loop()
     qasync.run(get_event_loop_coro())
-    assert asyncio.get_event_loop() != expected_loop
+    new_loop = asyncio.new_event_loop()
+    assert type(old_loop) == type(new_loop)

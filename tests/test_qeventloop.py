@@ -11,6 +11,7 @@ import os
 import socket
 import subprocess
 import sys
+import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
 import pytest
@@ -789,6 +790,22 @@ def test_not_running_immediately_after_stopped(loop):
     assert not loop.is_running()
     loop.run_until_complete(mycoro())
     assert not loop.is_running()
+
+
+def test_slow_callback_duration_logging(loop, caplog):
+    async def mycoro():
+        time.sleep(1)
+
+    caplog.clear()
+    loop.set_debug(True)
+    loop.slow_callback_duration = 0.1
+    with caplog.at_level(logging.WARNING):
+        loop.run_until_complete(mycoro())
+    assert len(caplog.records) == 1
+    msg = caplog.records[0].message
+    assert "Executing" in msg
+    assert "took" in msg
+    assert "seconds" in msg
 
 
 def teardown_module(module):

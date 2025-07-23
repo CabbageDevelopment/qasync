@@ -53,6 +53,7 @@ if __name__ == "__main__":
     main_window.show()
 
     asyncio.run(app_close_event.wait(), loop_factory=lambda:QEventLoop(app))
+    # for 3.11 or older use: qasync.run(app_close_event.wait())
 ```
 
 More detailed examples can be found [here](https://github.com/CabbageDevelopment/qasync/tree/master/examples).

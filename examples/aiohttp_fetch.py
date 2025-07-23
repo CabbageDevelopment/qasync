@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qasync import QEventLoop, asyncClose, asyncSlot
+from qasync import asyncClose, asyncSlot, run as qasync_run
 
 
 class MainWindow(QWidget):
@@ -78,4 +78,4 @@ if __name__ == "__main__":
         asyncio.create_task(main_window.boot())
         await app_close_event.wait()
     
-    asyncio.run(async_main(), loop_factory=lambda:QEventLoop(app))
+    qasync_run(async_main())

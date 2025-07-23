@@ -808,6 +808,7 @@ def test_slow_callback_duration_logging(loop, caplog):
     assert "seconds" in msg
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="Requires Python 3.12+")
 def test_asyncio_run(application):
     "Test that QEventLoop is compatible with asyncio.run()"
     done = False
@@ -830,6 +831,7 @@ def test_asyncio_run(application):
     assert not loop.is_running()
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="Requires Python 3.12+")
 def test_asyncio_run_cleanup(application):
     "Test that running tasks are_cleaned up"
     task = None
@@ -848,6 +850,28 @@ def test_asyncio_run_cleanup(application):
     
     asyncio.run(main(), loop_factory=lambda:qasync.QEventLoop(application))
     assert cancelled
+
+
+def test_qasync_run(application):
+    done = False
+    loop = None
+    async def main():
+        nonlocal done, loop
+        loop = asyncio.get_running_loop()
+        assert loop.is_running()
+        await asyncio.sleep(0.01)
+        done = True
+    
+    def factory():
+        nonlocal loop
+        loop = qasync.QEventLoop(application)
+        return loop
+    
+    # qasync.run uses an EventLoopPolicy to create the loop
+    qasync.run(main())
+    assert done
+    assert loop.is_closed()
+    assert not loop.is_running()
 
 
 def teardown_module(module):

@@ -801,6 +801,8 @@ def asyncSlot(*args, **kwargs):
             task.result()
         except Exception:
             sys.excepthook(*sys.exc_info())
+        except asyncio.CancelledError:
+            pass
 
     def outer_decorator(fn):
         @Slot(*args, **kwargs)

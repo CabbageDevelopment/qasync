@@ -20,9 +20,9 @@ import logging
 import os
 import sys
 import time
+from collections import deque
 from concurrent.futures import Future
 from queue import Queue
-from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +235,7 @@ class QThreadExecutor:
 
 def _format_handle(handle: asyncio.Handle):
     cb = getattr(handle, "_callback", None)
-    if isinstance(getattr(cb, '__self__', None), asyncio.tasks.Task):
+    if isinstance(getattr(cb, "__self__", None), asyncio.tasks.Task):
         return repr(cb.__self__)
     return str(handle)
 
@@ -260,59 +260,59 @@ class _SimpleTimer(QtCore.QObject):
 
     def add_callback(self, handle, delay=0):
         timerid = self.startTimer(int(max(0, delay) * 1000))
-        self.__log_debug("Registering timer id %s", timerid)
+        self._logger.debug("Registering timer id %s", timerid)
         assert timerid not in self.__callbacks
         self.__callbacks[timerid] = handle
         return handle
 
     def timerEvent(self, event):  # noqa: N802
         timerid = event.timerId()
-        self.__log_debug("Timer event on id %s", timerid)
+        self._logger.debug("Timer event on id %s", timerid)
         if self._stopped:
-            self.__log_debug("Timer stopped, killing %s", timerid)
+            self._logger.debug("Timer stopped, killing %s", timerid)
             self.killTimer(timerid)
             del self.__callbacks[timerid]
+            return
+        try:
+            handle = self.__callbacks[timerid]
+        except KeyError as e:
+            self._logger.debug(e)
+            pass
         else:
-            try:
-                handle = self.__callbacks[timerid]
-            except KeyError as e:
-                self.__log_debug(e)
-                pass
+            if handle._cancelled:
+                self._logger.debug("Handle %s cancelled", handle)
             else:
-                if handle._cancelled:
-                    self.__log_debug("Handle %s cancelled", handle)
-                else:
-                    if self.__debug_enabled:
-                        # This may not be the most efficient thing to do, but it removes the need to sync
-                        # "slow_callback_duration" and "_current_handle" variables
-                        loop = asyncio.get_event_loop()
-                        try:
-                            loop._current_handle = handle
-                            self._logger.debug("Calling handle %s", handle)
-                            t0 = time.time()
-                            handle._run()
-                            dt = time.time() - t0
-                            if dt >= loop.slow_callback_duration:
-                                self._logger.warning('Executing %s took %.3f seconds', _format_handle(handle), dt)
-                        finally:
-                            loop._current_handle = None
-                    else:
+                if self.__debug_enabled:
+                    # This may not be the most efficient thing to do, but it removes the need to sync
+                    # "slow_callback_duration" and "_current_handle" variables
+                    loop = asyncio.get_event_loop()
+                    try:
+                        loop._current_handle = handle
+                        self._logger.debug("Calling handle %s", handle)
+                        t0 = time.time()
                         handle._run()
-            finally:
-                del self.__callbacks[timerid]
-                handle = None
-            self.killTimer(timerid)
+                        dt = time.time() - t0
+                        if dt >= loop.slow_callback_duration:
+                            self._logger.warning(
+                                "Executing %s took %.3f seconds",
+                                _format_handle(handle),
+                                dt,
+                            )
+                    finally:
+                        loop._current_handle = None
+                else:
+                    handle._run()
+        finally:
+            del self.__callbacks[timerid]
+            handle = None
+        self.killTimer(timerid)
 
     def stop(self):
-        self.__log_debug("Stopping timers")
+        self._logger.debug("Stopping timers")
         self._stopped = True
 
     def set_debug(self, enabled):
         self.__debug_enabled = enabled
-
-    def __log_debug(self, *args, **kwargs):
-        if self.__debug_enabled:
-            self._logger.debug(*args, **kwargs)
 
 
 @with_logger
@@ -334,7 +334,7 @@ class _CallSoonQueue(QtCore.QObject):
     def add_callback(self, handle):
         # handle must be an asyncio.Handle
         self.__callbacks.append(handle)
-        self.__log_debug("Registering call_soon handle %s", id(handle))
+        self._logger.debug("Registering call_soon handle %s", id(handle))
 
         # Create a timer if it doesn't yet exist
         if self.__timer_id is None:
@@ -342,7 +342,7 @@ class _CallSoonQueue(QtCore.QObject):
             # it gets fired immediately after window events are processed the next time.
             # See https://doc.qt.io/qt-6/qtimer.html#interval-prop
             self.__timer_id = self.startTimer(0)
-            self.__log_debug("Registering call_soon timer %s", self.__timer_id)
+            self._logger.debug("Registering call_soon timer %s", self.__timer_id)
         return handle
 
     def timerEvent(self, event):
@@ -353,8 +353,7 @@ class _CallSoonQueue(QtCore.QObject):
 
         # Stop timer if stopped
         if self.__stopped:
-            self.__log_debug("call_soon queue stopped, clearing handles")
-            # TODO: Do we need to del the handles or somehow invalidate them?
+            self._logger.debug("call_soon queue stopped, clearing handles")
             self.__callbacks.clear()
             self.killTimer(timerId)
             self.__timer_id = None
@@ -364,28 +363,40 @@ class _CallSoonQueue(QtCore.QObject):
         # TODO: Runtime deadline, don't process the entire queue if it takes too long?
         while len(self.__callbacks) > 0:
             handle = self.__callbacks.popleft()
-            self.__log_debug("Calling call_soon handle %s", id(handle))
-            handle._run()
+            if self.__debug_enabled:
+                # This may not be the most efficient thing to do, but it removes the need to sync
+                # "slow_callback_duration" and "_current_handle" variables
+                loop = asyncio.get_event_loop()
+                try:
+                    loop._current_handle = handle
+                    self._logger.debug("Calling handle %s", handle)
+                    t0 = time.time()
+                    handle._run()
+                    dt = time.time() - t0
+                    if dt >= loop.slow_callback_duration:
+                        self._logger.warning(
+                            "Executing %s took %.3f seconds", _format_handle(handle), dt
+                        )
+                finally:
+                    loop._current_handle = None
+            else:
+                handle._run()
 
         # No more callbacks exist, we can dispose this timer.
         # It will be recreated once a callback is registered again.
         # It's should be safe to assume that another thread isn't calling
         # add_callback during the lifetime of timerEvent
-        self.__log_debug("Stopping call_soon timer %s", timerId)
+        self._logger.debug("Stopping call_soon timer %s", timerId)
         self.killTimer(timerId)
         self.__timer_id = None
         assert len(self.__callbacks) == 0
 
     def stop(self):
-        self.__log_debug("Stopping call_soon queue")
+        self._logger.debug("Stopping call_soon queue")
         self.__stopped = True
 
     def set_debug(self, enabled):
         self.__debug_enabled = enabled
-
-    def __log_debug(self, *args, **kwargs):
-        if self.__debug_enabled:
-            self._logger.debug(*args, **kwargs)
 
 
 def _fileno(fd):
@@ -412,7 +423,7 @@ class _QEventLoop:
     ...     await asyncio.sleep(.1)
     >>>
     >>> asyncio.run(xplusy(2, 2), loop_factory=lambda:QEventLoop(app))
-    
+
     If the event loop shall be used with an existing and already running QApplication
     it must be specified in the constructor via already_running=True
     In this case the user is responsible for loop cleanup with stop() and close()

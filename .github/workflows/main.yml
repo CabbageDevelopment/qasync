@@ -44,6 +44,8 @@ jobs:
             qt-version: pyside2
           - python-version: "3.14-dev"
             qt-version: pyside2
+          - python-version: "3.14-dev"
+            os: windows
           # pyside6 and pyqt6 require python >=3.9
           - python-version: "3.8"
             qt-version: pyside6

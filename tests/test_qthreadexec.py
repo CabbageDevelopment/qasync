@@ -2,19 +2,18 @@
 # © 2014 Mark Harviston <mark.harviston@gmail.com>
 # © 2014 Arve Knudsen <arve.knudsen@gmail.com>
 # BSD License
+import logging
 import threading
 import weakref
-import logging
 
 import pytest
 
 import qasync
 
-
 _TestObject = type("_TestObject", (object,), {})
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def disable_executor_logging():
     """
     When running under pytest, leftover LogRecord objects
@@ -74,7 +73,7 @@ def test_stack_recursion_limit(executor):
             f.result()
 
 
-def test_no_stale_reference_as_argument(executor):
+def test_no_stale_reference_as_argument(executor, disable_executor_logging):
     test_obj = _TestObject()
     test_obj_collected = threading.Event()
 
@@ -87,12 +86,12 @@ def test_no_stale_reference_as_argument(executor):
     future.result()
 
     collected = test_obj_collected.wait(timeout=1)
-    assert (
-        collected is True
-    ), "Stale reference to executor argument not collected within timeout."
+    assert collected is True, (
+        "Stale reference to executor argument not collected within timeout."
+    )
 
 
-def test_no_stale_reference_as_result(executor):
+def test_no_stale_reference_as_result(executor, disable_executor_logging):
     # Get object as result out of executor
     test_obj = executor.submit(lambda: _TestObject()).result()
     test_obj_collected = threading.Event()
@@ -102,6 +101,6 @@ def test_no_stale_reference_as_result(executor):
     del test_obj
 
     collected = test_obj_collected.wait(timeout=1)
-    assert (
-        collected is True
-    ), "Stale reference to executor result not collected within timeout."
+    assert collected is True, (
+        "Stale reference to executor result not collected within timeout."
+    )

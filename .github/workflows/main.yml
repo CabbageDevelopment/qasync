@@ -105,14 +105,14 @@ jobs:
       - name: Check lock file
         run: poetry check --lock
 
+      - name: Delete any stray venvs
+        run: poetry env remove --all
+
       - name: Install dependencies
         run: poetry install --with github-actions
 
       # - name: Run mypy
       #   run: poetry run mypy
-
-      - name: Delete any stray venvs
-        run: poetry env remove --all
 
       - name: Install Qt
         run: poetry run pip install --ignore-installed ${{ matrix.qt-version }}

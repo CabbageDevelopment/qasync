@@ -44,9 +44,6 @@ jobs:
             qt-version: pyside2
           - python-version: "3.14-dev"
             qt-version: pyside2
-          # To be removed when pyqt6 supports this
-          - python-version: "3.14-dev"
-            qt-version: pyqt6
           # pyside6 and pyqt6 require python >=3.9
           - python-version: "3.8"
             qt-version: pyside6
@@ -113,6 +110,9 @@ jobs:
 
       # - name: Run mypy
       #   run: poetry run mypy
+
+      - name: Delete any stray venvs
+        run: poetry env info -p >/dev/null 2>&1 && poetry env remove python
 
       - name: Install Qt
         run: poetry run pip install --ignore-installed ${{ matrix.qt-version }}

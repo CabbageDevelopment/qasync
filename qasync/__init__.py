@@ -861,4 +861,4 @@ if sys.version_info < (3, 14):  # Backwards compatibility with the policy, since
 else:
 
     def run(*args, **kwargs):
-        return asyncio.run(*args, **kwargs, loop_factory=QEventLoop(QApplication.instance() or QApplication(sys.argv))
+        return asyncio.run(*args, **kwargs, loop_factory=QEventLoop(QApplication.instance() or QApplication(sys.argv)))

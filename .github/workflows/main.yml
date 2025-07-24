@@ -102,7 +102,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt-get -qq update
-          sudo apt-get -qq install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libegl-dev
+          sudo apt-get -qq install --reinstall '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libegl-dev
 
       - name: Run pytest
         uses: coactions/setup-xvfb@v1

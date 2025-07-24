@@ -1,11 +1,12 @@
-import functools
 import asyncio
-import time
+import functools
 import sys
+import time
 
 # from PyQt6.QtWidgets import
 from PySide6.QtWidgets import QApplication, QProgressBar
-from qasync import QThreadExecutor, run as qasync_run
+
+from qasync import QEventLoop, QThreadExecutor
 
 
 async def master():
@@ -34,4 +35,6 @@ def last_50(progress, loop):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    qasync_run(master())
+    # for 3.11 or older use qasync.run instead of asyncio.run
+    # qasync.run(master())
+    asyncio.run(master(), loop_factory=QEventLoop)

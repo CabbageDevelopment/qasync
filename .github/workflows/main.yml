@@ -112,7 +112,7 @@ jobs:
       #   run: poetry run mypy
 
       - name: Delete any stray venvs
-        run: poetry env info -p >/dev/null 2>&1 && poetry env remove python
+        run: poetry env remove --all
 
       - name: Install Qt
         run: poetry run pip install --ignore-installed ${{ matrix.qt-version }}

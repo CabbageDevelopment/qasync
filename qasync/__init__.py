@@ -856,7 +856,7 @@ if sys.version_info < (3, 14):  # Backwards compatibility with the policy, since
     
     def run(*args, **kwargs):
         with _set_event_loop_policy(DefaultQEventLoopPolicy()):
-            return asyncio.run(*args, **kwargs))
+            return asyncio.run(*args, **kwargs)
 
 else:
 

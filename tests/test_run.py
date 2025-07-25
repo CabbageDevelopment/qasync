@@ -26,6 +26,7 @@ def test_qasync_run_restores_loop(get_event_loop_coro):
         _ = asyncio.get_event_loop()
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="Deprecated since Python 3.14")
 def test_qasync_run_restores_policy(get_event_loop_coro):
     old_policy = asyncio.get_event_loop_policy()
     qasync.run(get_event_loop_coro(ANY))

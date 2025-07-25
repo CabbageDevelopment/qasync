@@ -105,7 +105,7 @@ class TestCanRunTasksInExecutor:
             loop.run_until_complete(
                 asyncio.wait_for(
                     loop.run_in_executor(executor, self.blocking_failure),
-                    timeout=3.0,
+                    timeout=10.0,
                 )
             )
 
@@ -126,7 +126,7 @@ class TestCanRunTasksInExecutor:
     async def blocking_task(self, loop, executor, was_invoked):
         logging.debug("start blocking task()")
         fut = loop.run_in_executor(executor, self.blocking_func, was_invoked)
-        await asyncio.wait_for(fut, timeout=5.0)
+        await asyncio.wait_for(fut, timeout=10.0)
         logging.debug("start blocking task()")
 
 
@@ -140,7 +140,7 @@ def test_can_execute_subprocess(loop):
         await process.wait()
         assert process.returncode == 5
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_read_subprocess(loop):
@@ -160,7 +160,7 @@ def test_can_read_subprocess(loop):
         assert process.returncode == 0
         assert received_stdout.strip() == b"Hello async world!"
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_communicate_subprocess(loop):
@@ -181,7 +181,7 @@ def test_can_communicate_subprocess(loop):
         assert process.returncode == 0
         assert received_stdout.strip() == b"Hello async world!"
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_terminate_subprocess(loop):

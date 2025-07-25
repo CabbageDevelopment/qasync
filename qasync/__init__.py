@@ -78,24 +78,28 @@ if QtModuleName == "PyQt5":
     from PyQt5.QtCore import pyqtSlot as Slot
 
     QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 
 elif QtModuleName == "PyQt6":
     from PyQt6 import QtWidgets
     from PyQt6.QtCore import pyqtSlot as Slot
 
     QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
 
 elif QtModuleName == "PySide2":
     from PySide2 import QtWidgets
     from PySide2.QtCore import Slot
 
     QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 
 elif QtModuleName == "PySide6":
     from PySide6 import QtWidgets
     from PySide6.QtCore import Slot
 
     QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 
 from ._common import with_logger  # noqa
 
@@ -142,8 +146,14 @@ class _QThreadWorker(QtCore.QThread):
                 else:
                     self._logger.debug("Setting Future result: %s", r)
                     future.set_result(r)
+                finally:
+                    # Release potential reference
+                    r = None  # noqa
             else:
                 self._logger.debug("Future was canceled")
+
+            # Delete references
+            del command, future, callback, args, kwargs
 
         self._logger.debug("Thread #%s stopped", self.__num)
 
@@ -228,7 +238,7 @@ class QThreadExecutor:
 
 def _format_handle(handle: asyncio.Handle):
     cb = getattr(handle, "_callback", None)
-    if isinstance(getattr(cb, '__self__', None), asyncio.tasks.Task):
+    if isinstance(getattr(cb, "__self__", None), asyncio.tasks.Task):
         return repr(cb.__self__)
     return str(handle)
 
@@ -286,7 +296,11 @@ class _SimpleTimer(QtCore.QObject):
                             handle._run()
                             dt = time.time() - t0
                             if dt >= loop.slow_callback_duration:
-                                self._logger.warning('Executing %s took %.3f seconds', _format_handle(handle), dt)
+                                self._logger.warning(
+                                    "Executing %s took %.3f seconds",
+                                    _format_handle(handle),
+                                    dt,
+                                )
                         finally:
                             loop._current_handle = None
                     else:
@@ -332,7 +346,7 @@ class _QEventLoop:
     ...     await asyncio.sleep(.1)
     >>>
     >>> asyncio.run(xplusy(2, 2), loop_factory=lambda:QEventLoop(app))
-    
+
     If the event loop shall be used with an existing and already running QApplication
     it must be specified in the constructor via already_running=True
     In this case the user is responsible for loop cleanup with stop() and close()
@@ -414,7 +428,9 @@ class _QEventLoop:
             self.run_forever()
         finally:
             future.remove_done_callback(stop)
-        self.__app.processEvents()  # run loop one last time to process all the events
+        self.__app.eventDispatcher().processEvents(
+            AllEvents
+        )  # run loop one last time to process all the events
         if not future.done():
             raise RuntimeError("Event loop stopped before Future completed.")
 
@@ -798,6 +814,8 @@ def asyncSlot(*args, **kwargs):
             task.result()
         except Exception:
             sys.excepthook(*sys.exc_info())
+        except asyncio.CancelledError:
+            pass
 
     def outer_decorator(fn):
         @Slot(*args, **kwargs)

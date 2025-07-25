@@ -5,13 +5,13 @@
 
 import asyncio
 import ctypes
-import threading
 import logging
 import multiprocessing
 import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
@@ -807,6 +807,31 @@ def test_slow_callback_duration_logging(loop, caplog):
     assert "Executing" in msg
     assert "took" in msg
     assert "seconds" in msg
+
+
+def test_run_until_complete_returns_future_result(loop):
+    async def coro():
+        await asyncio.sleep(0)
+        return 42
+
+    assert loop.run_until_complete(asyncio.wait_for(coro(), timeout=0.1)) == 42
+
+
+def test_run_forever_custom_exit_code(loop, application):
+    if hasattr(application, "exec"):
+        orig_exec = application.exec
+        application.exec = lambda: 42
+        try:
+            assert loop.run_forever() == 42
+        finally:
+            application.exec = orig_exec
+    else:
+        orig_exec = application.exec_
+        application.exec_ = lambda: 42
+        try:
+            assert loop.run_forever() == 42
+        finally:
+            application.exec_ = orig_exec
 
 
 @pytest.mark.skipif(sys.version_info < (3, 12), reason="Requires Python 3.12+")

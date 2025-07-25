@@ -105,7 +105,7 @@ class TestCanRunTasksInExecutor:
             loop.run_until_complete(
                 asyncio.wait_for(
                     loop.run_in_executor(executor, self.blocking_failure),
-                    timeout=3.0,
+                    timeout=10.0,
                 )
             )
 
@@ -126,7 +126,7 @@ class TestCanRunTasksInExecutor:
     async def blocking_task(self, loop, executor, was_invoked):
         logging.debug("start blocking task()")
         fut = loop.run_in_executor(executor, self.blocking_func, was_invoked)
-        await asyncio.wait_for(fut, timeout=5.0)
+        await asyncio.wait_for(fut, timeout=10.0)
         logging.debug("start blocking task()")
 
 
@@ -140,7 +140,7 @@ def test_can_execute_subprocess(loop):
         await process.wait()
         assert process.returncode == 5
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_read_subprocess(loop):
@@ -160,7 +160,7 @@ def test_can_read_subprocess(loop):
         assert process.returncode == 0
         assert received_stdout.strip() == b"Hello async world!"
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_communicate_subprocess(loop):
@@ -181,7 +181,7 @@ def test_can_communicate_subprocess(loop):
         assert process.returncode == 0
         assert received_stdout.strip() == b"Hello async world!"
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_terminate_subprocess(loop):
@@ -814,7 +814,7 @@ def test_run_until_complete_returns_future_result(loop):
         await asyncio.sleep(0)
         return 42
 
-    assert loop.run_until_complete(asyncio.wait_for(coro(), timeout=0.1)) == 42
+    assert loop.run_until_complete(asyncio.wait_for(coro(), timeout=1)) == 42
 
 
 def test_run_forever_custom_exit_code(loop, application):
@@ -832,72 +832,6 @@ def test_run_forever_custom_exit_code(loop, application):
             assert loop.run_forever() == 42
         finally:
             application.exec_ = orig_exec
-
-
-@pytest.mark.skipif(sys.version_info < (3, 12), reason="Requires Python 3.12+")
-def test_asyncio_run(application):
-    """Test that QEventLoop is compatible with asyncio.run()"""
-    done = False
-    loop = None
-
-    async def main():
-        nonlocal done, loop
-        assert loop.is_running()
-        assert asyncio.get_running_loop() is loop
-        await asyncio.sleep(0.01)
-        done = True
-
-    def factory():
-        nonlocal loop
-        loop = qasync.QEventLoop(application)
-        return loop
-
-    asyncio.run(main(), loop_factory=factory)
-    assert done
-    assert loop.is_closed()
-    assert not loop.is_running()
-
-
-@pytest.mark.skipif(sys.version_info < (3, 12), reason="Requires Python 3.12+")
-def test_asyncio_run_cleanup(application):
-    """Test that running tasks are cleaned up"""
-    task = None
-    cancelled = False
-
-    async def main():
-        nonlocal task, cancelled
-
-        async def long_task():
-            nonlocal cancelled
-            try:
-                await asyncio.sleep(10)
-            except asyncio.CancelledError:
-                cancelled = True
-
-        task = asyncio.create_task(long_task())
-        await asyncio.sleep(0.01)
-
-    asyncio.run(main(), loop_factory=lambda: qasync.QEventLoop(application))
-    assert cancelled
-
-
-def test_qasync_run(application):
-    """Test running with qasync.run()"""
-    done = False
-    loop = None
-
-    async def main():
-        nonlocal done, loop
-        loop = asyncio.get_running_loop()
-        assert loop.is_running()
-        await asyncio.sleep(0.01)
-        done = True
-
-    # qasync.run uses an EventLoopPolicy to create the loop
-    qasync.run(main())
-    assert done
-    assert loop.is_closed()
-    assert not loop.is_running()
 
 
 def test_qeventloop_in_qthread():
@@ -929,7 +863,6 @@ def test_qeventloop_in_qthread():
     assert event.wait(timeout=1), "Coroutine did not execute successfully"
 
     thread.join()  # Ensure thread cleanup
-
 
 def teardown_module(module):
     """

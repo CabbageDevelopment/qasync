@@ -849,28 +849,33 @@ def asyncSlot(*args, **kwargs):
     return outer_decorator
 
 
-class QEventLoopPolicyMixin:
-    def new_event_loop(self):
-        return QEventLoop(QApplication.instance() or QApplication(sys.argv))
+def _get_qevent_loop():
+    return QEventLoop(QApplication.instance() or QApplication(sys.argv))
 
 
-class DefaultQEventLoopPolicy(
-    QEventLoopPolicyMixin,
-    asyncio.DefaultEventLoopPolicy,
-):
-    pass
+if sys.version_info >= (3, 12):
 
+    def run(*args, **kwargs):
+        return asyncio.run(
+            *args,
+            **kwargs,
+            loop_factory=_get_qevent_loop,
+        )
+else:
+    # backwards compatibility with event loop policies
+    class DefaultQEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
+        def new_event_loop(self):
+            return _get_qevent_loop()
 
-@contextlib.contextmanager
-def _set_event_loop_policy(policy):
-    old_policy = asyncio.get_event_loop_policy()
-    asyncio.set_event_loop_policy(policy)
-    try:
-        yield
-    finally:
-        asyncio.set_event_loop_policy(old_policy)
+    @contextlib.contextmanager
+    def _set_event_loop_policy(policy):
+        old_policy = asyncio.get_event_loop_policy()
+        asyncio.set_event_loop_policy(policy)
+        try:
+            yield
+        finally:
+            asyncio.set_event_loop_policy(old_policy)
 
-
-def run(*args, **kwargs):
-    with _set_event_loop_policy(DefaultQEventLoopPolicy()):
-        return asyncio.run(*args, **kwargs)
+    def run(*args, **kwargs):
+        with _set_event_loop_policy(DefaultQEventLoopPolicy()):
+            return asyncio.run(*args, **kwargs)

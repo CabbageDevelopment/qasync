@@ -103,9 +103,6 @@ jobs:
       - name: Check lock file
         run: poetry check --lock
 
-      - name: Delete any stray venvs
-        run: poetry env remove --all
-
       - name: Install dependencies
         run: poetry install --with github-actions
 

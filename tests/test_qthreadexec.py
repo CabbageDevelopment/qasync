@@ -2,9 +2,32 @@
 # © 2014 Mark Harviston <mark.harviston@gmail.com>
 # © 2014 Arve Knudsen <arve.knudsen@gmail.com>
 # BSD License
+import logging
+import threading
+import weakref
 
 import pytest
+
 import qasync
+
+_TestObject = type("_TestObject", (object,), {})
+
+
+@pytest.fixture
+def disable_executor_logging():
+    """
+    When running under pytest, leftover LogRecord objects
+    keep references to objects in the scope that logging was called in.
+    To avoid issues with tests targeting stale references,
+    we disable logging for QThreadExecutor and _QThreadWorker classes.
+    """
+    for cls in (qasync.QThreadExecutor, qasync._QThreadWorker):
+        logger_name = cls.__qualname__
+        if cls.__module__ is not None:
+            logger_name = f"{cls.__module__}.{logger_name}"
+        logger = logging.getLogger(logger_name)
+        logger.addHandler(logging.NullHandler())
+        logger.propagate = False
 
 
 @pytest.fixture
@@ -48,3 +71,36 @@ def test_stack_recursion_limit(executor):
     for f in fs:
         with pytest.raises(RecursionError):
             f.result()
+
+
+def test_no_stale_reference_as_argument(executor, disable_executor_logging):
+    test_obj = _TestObject()
+    test_obj_collected = threading.Event()
+
+    # Reference to weakref has to be kept for callback to work
+    _ = weakref.ref(test_obj, lambda *_: test_obj_collected.set())
+    # Submit object as argument to the executor
+    future = executor.submit(lambda *_: None, test_obj)
+    del test_obj
+    # Wait for future to resolve
+    future.result()
+
+    collected = test_obj_collected.wait(timeout=1)
+    assert collected is True, (
+        "Stale reference to executor argument not collected within timeout."
+    )
+
+
+def test_no_stale_reference_as_result(executor, disable_executor_logging):
+    # Get object as result out of executor
+    test_obj = executor.submit(lambda: _TestObject()).result()
+    test_obj_collected = threading.Event()
+
+    # Reference to weakref has to be kept for callback to work
+    _ = weakref.ref(test_obj, lambda *_: test_obj_collected.set())
+    del test_obj
+
+    collected = test_obj_collected.wait(timeout=1)
+    assert collected is True, (
+        "Stale reference to executor result not collected within timeout."
+    )

@@ -77,6 +77,8 @@ plugins = ["coverage_conditional_plugin"]
 [tool.coverage.coverage_conditional_plugin.rules]
 no_cover_if_windows = "sys_platform == 'win32'"
 no_cover_if_unix = "sys_platform != 'win32'"
+no_cover_if_lt312 = "sys_version_info < (3, 12, 0)"
+no_cover_if_geq312 = "sys_version_info >= (3, 12, 0)"
 
 [tool.coverage.report]
 show_missing = true

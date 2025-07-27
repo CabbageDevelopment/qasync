@@ -847,7 +847,7 @@ def _get_qevent_loop():
     return QEventLoop(QApplication.instance() or QApplication(sys.argv))
 
 
-if sys.version_info >= (3, 12):
+if sys.version_info >= (3, 12):  # pragma: no_cover_if_lt312
 
     def run(*args, **kwargs):
         return asyncio.run(
@@ -855,7 +855,7 @@ if sys.version_info >= (3, 12):
             **kwargs,
             loop_factory=_get_qevent_loop,
         )
-else:
+else:  # pragma: no_cover_if_geq312
     # backwards compatibility with event loop policies
     class DefaultQEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
         def new_event_loop(self):

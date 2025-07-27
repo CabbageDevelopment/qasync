@@ -18,7 +18,9 @@ def with_logger(cls):
     module = cls.__module__
     if module is not None:
         cls_name = module + "." + cls_name
-    else:
+    # This is just an internal helper function; edge cases
+    # like this need not be tested, so no cover.
+    else:  # pragma: no cover
         raise AssertionError
     setattr(cls, attr_name, logging.getLogger(cls_name))
     return cls

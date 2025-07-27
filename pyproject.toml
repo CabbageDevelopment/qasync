@@ -65,3 +65,17 @@ build-backend = "poetry.core.masonry.api"
 addopts = "-n auto"
 markers = ["raises"]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+plugins = ["coverage_conditional_plugin"]
+
+[tool.coverage.coverage_conditional_plugin.omit]
+"sys_platform == 'win32'" = "qasync/_unix.py"
+"sys_platform != 'win32'" = "qasync/_windows.py"
+
+[tool.coverage.coverage_conditional_plugin.rules]
+no_cover_if_windows = "sys_platform == 'win32'"
+no_cover_if_unix = "sys_platform != 'win32'"
+
+[tool.coverage.report]
+show_missing = true

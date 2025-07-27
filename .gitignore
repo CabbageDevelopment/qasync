@@ -21,6 +21,9 @@ _build
 .cache
 *.so
 
+# coverage
+.coverage.*.*.*
+
 # logs
 pip-log.txt
 

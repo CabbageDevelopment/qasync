@@ -27,9 +27,14 @@ logger = logging.getLogger(__name__)
 
 QtModule = None
 
+
+# Determining the Qt Python implementation is not coveraged,
+# since these stuff can depend on the configurations on the
+# testing machine.
+
 # If QT_API env variable is given, use that or fail trying
 qtapi_env = os.getenv("QT_API", "").strip().lower()
-if qtapi_env:
+if qtapi_env:  # pragma: no cover
     env_to_mod_map = {
         "pyqt5": "PyQt5",
         "pyqt6": "PyQt6",
@@ -51,14 +56,14 @@ if qtapi_env:
     QtModule = importlib.import_module(QtModuleName)
 
 # If a Qt lib is already imported, use that
-if not QtModule:
+if not QtModule:  # pragma: no cover
     for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         if QtModuleName in sys.modules:
             QtModule = sys.modules[QtModuleName]
             break
 
 # Try importing qt libs
-if not QtModule:
+if not QtModule:  # pragma: no cover
     for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         try:
             QtModule = importlib.import_module(QtModuleName)
@@ -67,35 +72,22 @@ if not QtModule:
         else:
             break
 
-if not QtModule:
+if not QtModule:  # pragma: no cover
     raise ImportError("No Qt implementations found")
 
 QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
+QtWidgets = importlib.import_module(QtModuleName + ".QtWidgets", package=QtModuleName)
+QApplication = QtWidgets.QApplication
 
-if QtModuleName == "PyQt5":
-    from PyQt5 import QtWidgets
+if QtModuleName == "PyQt5":  # pragma: no cover
     from PyQt5.QtCore import pyqtSlot as Slot
-
-    QApplication = QtWidgets.QApplication
-
-elif QtModuleName == "PyQt6":
-    from PyQt6 import QtWidgets
+elif QtModuleName == "PyQt6":  # pragma: no cover
     from PyQt6.QtCore import pyqtSlot as Slot
-
-    QApplication = QtWidgets.QApplication
-
-elif QtModuleName == "PySide2":
-    from PySide2 import QtWidgets
+elif QtModuleName == "PySide2":  # pragma: no cover
     from PySide2.QtCore import Slot
-
-    QApplication = QtWidgets.QApplication
-
-elif QtModuleName == "PySide6":
-    from PySide6 import QtWidgets
+elif QtModuleName == "PySide6":  # pragma: no cover
     from PySide6.QtCore import Slot
-
-    QApplication = QtWidgets.QApplication
 
 from ._common import with_logger  # noqa
 
@@ -170,7 +162,9 @@ class QThreadExecutor:
         super().__init__()
         self.__max_workers = max_workers
         self.__queue = Queue()
-        if stack_size is None:
+        # No cover the whole thing because we cannot test
+        # some of the configurations.
+        if stack_size is None:  # pragma: no cover
             # Match cpython/Python/thread_pthread.h
             if sys.platform.startswith("darwin"):
                 stack_size = 16 * 2**20
@@ -760,12 +754,12 @@ from ._unix import _SelectorEventLoop  # noqa
 
 QSelectorEventLoop = type("QSelectorEventLoop", (_QEventLoop, _SelectorEventLoop), {})
 
-if os.name == "nt":
+if os.name == "nt":  # pragma: no_cover_if_unix
     from ._windows import _ProactorEventLoop
 
     QIOCPEventLoop = type("QIOCPEventLoop", (_QEventLoop, _ProactorEventLoop), {})
     QEventLoop = QIOCPEventLoop
-else:
+else:  # pragma: no_cover_if_windows
     QEventLoop = QSelectorEventLoop
 
 

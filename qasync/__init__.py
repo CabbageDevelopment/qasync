@@ -82,6 +82,7 @@ QApplication = QtWidgets.QApplication
 
 if QtModuleName == "PyQt5":  # pragma: no cover
     from PyQt5.QtCore import pyqtSlot as Slot
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 elif QtModuleName == "PyQt6":  # pragma: no cover
     from PyQt6.QtCore import pyqtSlot as Slot
     AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)

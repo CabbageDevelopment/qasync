@@ -791,12 +791,21 @@ def test_not_running_immediately_after_stopped(loop):
     loop.run_until_complete(mycoro())
     assert not loop.is_running()
 
-def test_task_recursion_fails(loop, application):
-    """Re-entering the event loop from a Task will fail if there is another
-    runnable task."""
+
+@pytest.mark.parametrize(
+    "async_wrap, expect_async_called, expect_exception",
+    [(False, False, True), (True, True, False)],
+)
+def test_async_wrap(
+    loop, application, async_wrap, expect_async_called, expect_exception
+):
+    """
+    Re-entering the event loop from a Task will fail if there is another
+    runnable task.
+    """
     async_called = False
     main_called = False
-    
+
     async def async_job():
         nonlocal async_called
         async_called = True
@@ -805,59 +814,31 @@ def test_task_recursion_fails(loop, application):
         asyncio.create_task(async_job())
         assert not async_called
         application.processEvents()
-        assert not async_called
+        assert async_called if expect_async_called else not async_called
         return 1
 
     async def main():
         nonlocal main_called
-        res = sync_callback()
+        if async_wrap:
+            res = await qasync.asyncWrap(sync_callback)
+        else:
+            res = sync_callback()
         assert res == 1
         main_called = True
 
-    exceptions= []
+    exceptions = []
     loop.set_exception_handler(lambda loop, context: exceptions.append(context))
 
     loop.run_until_complete(main())
     assert main_called, "The main function should have been called"
-    
-    # We will now have an error in there, because the task 'async_job' could not 
-    # be entered, because the task 'main' was still being executed by the event loop.
-    assert len(exceptions) == 1
-    assert isinstance(exceptions[0]["exception"], RuntimeError)
 
-
-def test_call_sync(loop, application):
-    """Re-entering the event loop from a Task will fail if there is another
-    runnable task."""
-    async_called = False
-    main_called = False
-    
-    async def async_job():
-        nonlocal async_called
-        async_called = True
-
-    def sync_callback():
-        asyncio.create_task(async_job())
-        assert not async_called
-        application.processEvents()
-        assert async_called
-        return 1
-
-    async def main():
-        nonlocal main_called
-        res = await qasync.call_sync(sync_callback)
-        assert res == 1
-        main_called = True
-
-    exceptions= []
-    loop.set_exception_handler(lambda loop, context: exceptions.append(context))
-
-    loop.run_until_complete(main())
-    assert main_called, "The main function should have been called"
-    
-    # We will now have an error in there, because the task 'async_job' could not 
-    # be entered, because the task 'main' was still being executed by the event loop.
-    assert len(exceptions) == 0
+    if expect_exception:
+        # We will now have an error in there, because the task 'async_job' could not
+        # be entered, because the task 'main' was still being executed by the event loop.
+        assert len(exceptions) == 1
+        assert isinstance(exceptions[0]["exception"], RuntimeError)
+    else:
+        assert len(exceptions) == 0
 
 
 def test_slow_callback_duration_logging(loop, caplog):

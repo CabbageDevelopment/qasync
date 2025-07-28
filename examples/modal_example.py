@@ -2,8 +2,9 @@ import asyncio
 import sys
 
 # from PyQt6.QtWidgets import
-from PySide6.QtWidgets import QApplication, QProgressBar, QMessageBox
-from qasync import QEventLoop, call_sync
+from PySide6.QtWidgets import QApplication, QMessageBox, QProgressBar
+
+from qasync import QEventLoop, asyncWrap
 
 
 async def master():
@@ -11,20 +12,18 @@ async def master():
     progress.setRange(0, 99)
     progress.show()
     await first_50(progress)
-    
+
 
 async def first_50(progress):
     for i in range(50):
         progress.setValue(i)
         await asyncio.sleep(0.1)
-    
+
     # Schedule the last 50% to run asynchronously
-    asyncio.create_task(
-        last_50(progress)
-    )
-    
+    asyncio.create_task(last_50(progress))
+
     # create a notification box, use helper to make entering event loop safe.
-    result = await call_sync(
+    result = await asyncWrap(
         lambda: QMessageBox.information(
             None, "Task Completed", "The first 50% of the task is completed."
         )

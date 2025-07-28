@@ -8,7 +8,7 @@ Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
 BSD License
 """
 
-__all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose", "call_sync"]
+__all__ = ["QEventLoop", "QThreadExecutor", "asyncSlot", "asyncClose", "asyncWrap"]
 
 import asyncio
 import contextlib
@@ -833,8 +833,29 @@ def asyncSlot(*args, **kwargs):
 
     return outer_decorator
 
-async def call_sync(fn, *args, **kwargs):
-    """run a blocking call from the Qt event loop."""
+
+async def asyncWrap(fn, *args, **kwargs):
+    """
+    Wrap a blocking function as an asynchronous and run it on the native Qt event loop.
+    The function will be scheduled using a one shot QTimer which prevents blocking the
+    QEventLoop. An example usage of this is raising a modal dialogue inside an asyncSlot.
+    ```python
+    async def before_shutdown(self):
+        await asyncio.sleep(2)
+
+    @asyncSlot()
+    async def shutdown_clicked(self):
+        # do some work async
+        asyncio.create_task(self.before_shutdown())
+
+        # run on the native Qt loop, not blocking the QEventLoop
+        result = await asyncWrap(
+            lambda: QMessageBox.information(None, "Done", "It is now safe to shutdown.")
+        )
+        if result == QMessageBox.StandardButton.Ok:
+            app.exit(0)
+    ```
+    """
     future = asyncio.Future()
 
     @functools.wraps(fn)

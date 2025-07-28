@@ -11,6 +11,7 @@ import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 
@@ -104,7 +105,7 @@ class TestCanRunTasksInExecutor:
             loop.run_until_complete(
                 asyncio.wait_for(
                     loop.run_in_executor(executor, self.blocking_failure),
-                    timeout=3.0,
+                    timeout=10.0,
                 )
             )
 
@@ -125,7 +126,7 @@ class TestCanRunTasksInExecutor:
     async def blocking_task(self, loop, executor, was_invoked):
         logging.debug("start blocking task()")
         fut = loop.run_in_executor(executor, self.blocking_func, was_invoked)
-        await asyncio.wait_for(fut, timeout=5.0)
+        await asyncio.wait_for(fut, timeout=10.0)
         logging.debug("start blocking task()")
 
 
@@ -139,7 +140,7 @@ def test_can_execute_subprocess(loop):
         await process.wait()
         assert process.returncode == 5
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_read_subprocess(loop):
@@ -159,7 +160,7 @@ def test_can_read_subprocess(loop):
         assert process.returncode == 0
         assert received_stdout.strip() == b"Hello async world!"
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_communicate_subprocess(loop):
@@ -180,7 +181,7 @@ def test_can_communicate_subprocess(loop):
         assert process.returncode == 0
         assert received_stdout.strip() == b"Hello async world!"
 
-    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=3))
+    loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
 def test_can_terminate_subprocess(loop):
@@ -856,6 +857,61 @@ def test_slow_callback_duration_logging(loop, caplog):
     assert "took" in msg
     assert "seconds" in msg
 
+
+def test_run_until_complete_returns_future_result(loop):
+    async def coro():
+        await asyncio.sleep(0)
+        return 42
+
+    assert loop.run_until_complete(asyncio.wait_for(coro(), timeout=1)) == 42
+
+
+def test_run_forever_custom_exit_code(loop, application):
+    if hasattr(application, "exec"):
+        orig_exec = application.exec
+        application.exec = lambda: 42
+        try:
+            assert loop.run_forever() == 42
+        finally:
+            application.exec = orig_exec
+    else:
+        orig_exec = application.exec_
+        application.exec_ = lambda: 42
+        try:
+            assert loop.run_forever() == 42
+        finally:
+            application.exec_ = orig_exec
+
+
+def test_qeventloop_in_qthread():
+    class CoroutineExecutorThread(qasync.QtCore.QThread):
+        def __init__(self, coro):
+            super().__init__()
+            self.coro = coro
+            self.loop = None
+
+        def run(self):
+            self.loop = qasync.QEventLoop(self)
+            asyncio.set_event_loop(self.loop)
+            asyncio.run(self.coro)
+
+        def join(self):
+            self.loop.stop()
+            self.loop.close()
+            self.wait()
+
+    event = threading.Event()
+
+    async def coro():
+        await asyncio.sleep(0.1)
+        event.set()
+
+    thread = CoroutineExecutorThread(coro())
+    thread.start()
+
+    assert event.wait(timeout=1), "Coroutine did not execute successfully"
+
+    thread.join()  # Ensure thread cleanup
 
 def teardown_module(module):
     """

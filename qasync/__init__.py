@@ -39,14 +39,14 @@ if qtapi_env:
         "pyside2": "PySide2",
         "pyside": "PySide6",
     }
-    if qtapi_env in env_to_mod_map:
+    try:
         QtModuleName = env_to_mod_map[qtapi_env]
-    else:
+    except KeyError as e:  # pragma: no cover
         raise ImportError(
             "QT_API environment variable set ({}) but not one of [{}].".format(
                 qtapi_env, ", ".join(env_to_mod_map.keys())
             )
-        )
+        ) from e
 
     logger.info("Forcing use of {} as Qt Implementation".format(QtModuleName))
     QtModule = importlib.import_module(QtModuleName)

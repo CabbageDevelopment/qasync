@@ -28,10 +28,6 @@ logger = logging.getLogger(__name__)
 QtModule = None
 
 
-# Determining the Qt Python implementation is not coveraged,
-# since these stuff can depend on the configurations on the
-# testing machine.
-
 # If QT_API env variable is given, use that or fail trying
 qtapi_env = os.getenv("QT_API", "").strip().lower()
 if qtapi_env:  # pragma: no cover
@@ -79,19 +75,9 @@ QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 QtWidgets = importlib.import_module(QtModuleName + ".QtWidgets", package=QtModuleName)
 QApplication = QtWidgets.QApplication
-
-if QtModuleName == "PyQt5":  # pragma: no cover
-    from PyQt5.QtCore import pyqtSlot as Slot
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
-elif QtModuleName == "PyQt6":  # pragma: no cover
-    from PyQt6.QtCore import pyqtSlot as Slot
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
-elif QtModuleName == "PySide2":  # pragma: no cover
-    from PySide2.QtCore import Slot
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
-elif QtModuleName == "PySide6":  # pragma: no cover
-    from PySide6.QtCore import Slot
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
+Slot = getattr(QtCore, "pyqtSlot", None) or getattr(QtCore, "Slot")
+ProcessEventsFlag = getattr(QtCore.QEventLoop, "ProcessEventsFlag", None) or getattr(QtCore.QEventLoop, "ProcessEventsFlags", None)
+AllEvents = ProcessEventsFlag(0x00)
 
 from ._common import with_logger  # noqa
 

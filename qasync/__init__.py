@@ -30,7 +30,7 @@ QtModule = None
 
 # If QT_API env variable is given, use that or fail trying
 qtapi_env = os.getenv("QT_API", "").strip().lower()
-if qtapi_env:  # pragma: no cover
+if qtapi_env:
     env_to_mod_map = {
         "pyqt5": "PyQt5",
         "pyqt6": "PyQt6",

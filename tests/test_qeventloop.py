@@ -793,6 +793,59 @@ def test_not_running_immediately_after_stopped(loop):
     assert not loop.is_running()
 
 
+@pytest.mark.parametrize(
+    "async_wrap, expect_async_called, expect_exception",
+    [(False, False, True), (True, True, False)],
+)
+def test_async_wrap(
+    loop, application, async_wrap, expect_async_called, expect_exception
+):
+    """
+    Re-entering the event loop from a Task will fail if there is another
+    runnable task.
+    """
+    async_called = False
+    main_called = False
+
+    async def async_job():
+        nonlocal async_called
+        async_called = True
+
+    def sync_callback():
+        coro = async_job()
+        asyncio.create_task(coro)
+        assert not async_called
+        application.processEvents()
+        assert async_called if expect_async_called else not async_called
+        return 1, coro
+
+    async def main():
+        nonlocal main_called
+        if async_wrap:
+            res, coro = await qasync.asyncWrap(sync_callback)
+        else:
+            res, coro = sync_callback()
+            if expect_exception:
+                await coro  # avoid warnings about unawaited coroutines
+        assert res == 1
+        main_called = True
+        
+
+    exceptions = []
+    loop.set_exception_handler(lambda loop, context: exceptions.append(context))
+
+    loop.run_until_complete(main())
+    assert main_called, "The main function should have been called"
+
+    if expect_exception:
+        # We will now have an error in there, because the task 'async_job' could not
+        # be entered, because the task 'main' was still being executed by the event loop.
+        assert len(exceptions) == 1
+        assert isinstance(exceptions[0]["exception"], RuntimeError)
+    else:
+        assert len(exceptions) == 0
+
+
 def test_slow_callback_duration_logging(loop, caplog):
     async def mycoro():
         time.sleep(1)

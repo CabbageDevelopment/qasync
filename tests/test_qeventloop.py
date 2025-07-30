@@ -812,20 +812,24 @@ def test_async_wrap(
         async_called = True
 
     def sync_callback():
-        asyncio.create_task(async_job())
+        coro = async_job()
+        asyncio.create_task(coro)
         assert not async_called
         application.processEvents()
         assert async_called if expect_async_called else not async_called
-        return 1
+        return 1, coro
 
     async def main():
         nonlocal main_called
         if async_wrap:
-            res = await qasync.asyncWrap(sync_callback)
+            res, coro = await qasync.asyncWrap(sync_callback)
         else:
-            res = sync_callback()
+            res, coro = sync_callback()
+            if expect_exception:
+                await coro  # avoid warnings about unawaited coroutines
         assert res == 1
         main_called = True
+        
 
     exceptions = []
     loop.set_exception_handler(lambda loop, context: exceptions.append(context))

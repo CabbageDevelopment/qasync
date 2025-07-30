@@ -40,7 +40,7 @@ if qtapi_env:
     }
     if qtapi_env in env_to_mod_map:
         QtModuleName = env_to_mod_map[qtapi_env]
-    else:
+    else:  # pragma: no cover
         raise ImportError(
             "QT_API environment variable set ({}) but not one of [{}].".format(
                 qtapi_env, ", ".join(env_to_mod_map.keys())
@@ -51,14 +51,14 @@ if qtapi_env:
     QtModule = importlib.import_module(QtModuleName)
 
 # If a Qt lib is already imported, use that
-if not QtModule:
+if not QtModule:  # pragma: no cover
     for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         if QtModuleName in sys.modules:
             QtModule = sys.modules[QtModuleName]
             break
 
 # Try importing qt libs
-if not QtModule:
+if not QtModule:  # pragma: no cover
     for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         try:
             QtModule = importlib.import_module(QtModuleName)
@@ -72,34 +72,11 @@ if not QtModule:
 
 QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
-
-if QtModuleName == "PyQt5":
-    from PyQt5 import QtWidgets
-    from PyQt5.QtCore import pyqtSlot as Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
-
-elif QtModuleName == "PyQt6":
-    from PyQt6 import QtWidgets
-    from PyQt6.QtCore import pyqtSlot as Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
-
-elif QtModuleName == "PySide2":
-    from PySide2 import QtWidgets
-    from PySide2.QtCore import Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
-
-elif QtModuleName == "PySide6":
-    from PySide6 import QtWidgets
-    from PySide6.QtCore import Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
+QtWidgets = importlib.import_module(QtModuleName + ".QtWidgets", package=QtModuleName)
+QApplication = QtWidgets.QApplication
+Slot = getattr(QtCore, "pyqtSlot", None) or getattr(QtCore, "Slot")
+ProcessEventsFlag = getattr(QtCore.QEventLoop, "ProcessEventsFlag", None) or getattr(QtCore.QEventLoop, "ProcessEventsFlags", None)
+AllEvents = ProcessEventsFlag(0x00)
 
 from ._common import with_logger  # noqa
 
@@ -180,7 +157,7 @@ class QThreadExecutor:
         super().__init__()
         self.__max_workers = max_workers
         self.__queue = Queue()
-        if stack_size is None:
+        if stack_size is None:  # pragma: no cover
             # Match cpython/Python/thread_pthread.h
             if sys.platform.startswith("darwin"):
                 stack_size = 16 * 2**20

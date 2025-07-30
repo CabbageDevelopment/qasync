@@ -7,19 +7,12 @@ BSD License
 """
 
 import logging
-import os
 
 from pytest import fixture
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(levelname)s\t%(filename)s:%(lineno)s %(message)s"
 )
-
-
-if os.name == "nt":
-    collect_ignore = ["qasync/_unix.py"]
-else:
-    collect_ignore = ["qasync/_windows.py"]
 
 
 @fixture(scope="session")

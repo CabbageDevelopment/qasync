@@ -1,23 +1,27 @@
+default_stages:
+  - pre-commit
+  - pre-push
 repos:
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    # uv version.
+    rev: 0.8.3
+    hooks:
+      - id: uv-lock
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.12.5
+    hooks:
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-        exclude: ^.*\.egg-info/
-      - id: check-merge-conflict
-      - id: check-case-conflict
-      - id: check-toml
       - id: check-yaml
-      - id: check-ast
-      - id: check-docstring-first
-
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 23.9.1
-    hooks:
-      - id: black
-
-  - repo: https://github.com/pre-commit/pre-commit
-    rev: v3.4.0
-    hooks:
-      - id: validate_manifest
+      - id: check-toml
+      - id: end-of-file-fixer
+        exclude_types: [json]
+      - id: trailing-whitespace
+        exclude_types: [json]

@@ -2,6 +2,7 @@
 .idea/*
 .vscode/*
 .python-version
+.mise.toml
 .DS_Store
 
 # python
@@ -21,17 +22,7 @@ _build
 .cache
 *.so
 
-# logs
-pip-log.txt
-
 # testing / coverage
-.coverage
+.coverage*
 .pytest_cache
-
-# release
-/setup.cfg
-MANIFEST.in
-# /setup.py
-/releases/*
-pip-wheel-metadata
-poetry.toml
+.ruff_cache

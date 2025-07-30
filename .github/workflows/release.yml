@@ -13,35 +13,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version-file: pyproject.toml
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | POETRY_VERSION=1.8.4 python - -y
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.3"
+          enable-cache: true
 
-      - name: Update PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Build qasync
+        run: uv build
 
-      - name: Build project for distribution
-        run: poetry build
-
-      - name: Check Version
-        id: check-version
-        run: |
-          [[ "$(poetry version --short)" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || echo prerelease=true >> $GITHUB_OUTPUT
-
-      - name: Create Release
+      - name: Create release
         uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: steps.check-version.outputs.prerelease == 'true'
+          allowUpdates: true
+          generateReleaseNotes: true
+          token: ${{ github.token }}
 
       - name: Publish to PyPI
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
-        run: poetry publish
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish

@@ -1,20 +1,23 @@
-[tool.poetry]
+[build-system]
+build-backend = "uv_build"
+requires = ["uv_build>=0.8.3,<0.9.0"]
+
+[project]
 name = "qasync"
-version = "0.27.2"
 description = "Python library for using asyncio in Qt-based applications"
-authors = [
-  "Arve Knudsen <arve.knudsen@gmail.com>",
-  "Gerard Marull-Paretas <gerard@teslabs.com>",
-  "Mark Harviston <mark.harviston@gmail.com>",
-  "Alex March <alexmarch@fastmail.com>",
-  "Sam McCormack",
-]
-maintainers = ["Alex March <alexmach@fastmail.com>"]
 license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Arve Knudsen", email = "arve.knudsen@gmail.com" },
+  { name = "Gerard Marull-Paretas", email = "gerard@teslabs.com" },
+  { name = "Mark Harviston", email = "mark.harviston@gmail.com" },
+  { name = "Alex March", email = "alexmarch@fastmail.com" },
+  { name = "Sam McCormack" },
+]
+maintainers = [{ name = "Alex March", email = "alexmach@fastmail.com" }]
 readme = "README.md"
-homepage = "https://github.com/CabbageDevelopment/qasync"
-repository = "https://github.com/CabbageDevelopment/qasync"
-keywords = ["Qt", "asncio"]
+requires-python = ">=3.8"
+keywords = ["Qt", "asyncio"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: X11 Applications :: Qt",
@@ -27,41 +30,42 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
+version = "0.27.1"
 
-[tool.poetry.dependencies]
-python = ">=3.8, <3.14"
+dependencies = []
 
-[tool.poetry.group.dev.dependencies]
-pre-commit = "^2.21"
+[project.optional-dependencies]
+typing = ["mypy>=1.0"]
 
-[tool.poetry.group.test.dependencies]
-pytest = [
-  { version = "^7.4", python = "<3.9" },
-  { version = "^8.4", python = ">=3.9" },
-]
-pytest-cov = [
-  { version = "^4.1", python = "<3.9" },
-  { version = "^6.2", python = ">=3.9" },
-]
-pytest-xdist = [
-  { version = "^3.3", extras = [ "psutil", ], python = "<3.9" },
-  { version = "^3.8", extras = [ "psutil", ], python = ">=3.9" },
+[dependency-groups]
+dev = [
+  "pytest>=8.4; python_version>='3.9'",
+  "coverage>=7.10; python_version>='3.9'",
+
+  "pytest==7.4; python_version<'3.9'",
+  "coverage==7.6.1; python_version<'3.9'",
 ]
 
-[tool.poetry.group.typing.dependencies]
-mypy = ">=1.0"
+[project.urls]
+Homepage = "https://github.com/CabbageDevelopment/qasync"
+Repository = "https://github.com/CabbageDevelopment/qasync"
+Releases = "https://github.com/CabbageDevelopment/qasync/releases"
+Tracker = "https://github.com/CabbageDevelopment/qasync/issues"
 
-# only used in github actions
-[tool.poetry.group.github-actions]
-optional = true
-[tool.poetry.group.github-actions.dependencies]
-pytest-github-actions-annotate-failures = "^0.1.7"
+[tool.ruff]
+target-version = "py313"
 
-[build-system]
-requires = ["poetry-core>=1.5.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.pyright]
+include = ["src", "tests", "examples"]
+venvPath = "."
+venv = ".venv"
 
 [tool.pytest.ini_options]
-addopts = "-n auto"
 markers = ["raises"]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+relative_files = true
+command_line = "--module pytest --verbose tests/"
+source = ["src", "tests"]
+omit = ["tests/conftest.py"]

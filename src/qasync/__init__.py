@@ -29,7 +29,7 @@ QtModule = None
 
 # If QT_API env variable is given, use that or fail trying
 qtapi_env = os.getenv("QT_API", "").strip().lower()
-if qtapi_env:
+if qtapi_env: # pragma: no cover
     env_to_mod_map = {
         "pyqt5": "PyQt5",
         "pyqt6": "PyQt6",
@@ -51,14 +51,14 @@ if qtapi_env:
     QtModule = importlib.import_module(QtModuleName)
 
 # If a Qt lib is already imported, use that
-if not QtModule:
+if not QtModule:  # pragma: no cover
     for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         if QtModuleName in sys.modules:
             QtModule = sys.modules[QtModuleName]
             break
 
 # Try importing qt libs
-if not QtModule:
+if not QtModule:  # pragma: no cover
     for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
         try:
             QtModule = importlib.import_module(QtModuleName)
@@ -180,7 +180,7 @@ class QThreadExecutor:
         super().__init__()
         self.__max_workers = max_workers
         self.__queue = Queue()
-        if stack_size is None:
+        if stack_size is None:  # pragma: no cover
             # Match cpython/Python/thread_pthread.h
             if sys.platform.startswith("darwin"):
                 stack_size = 16 * 2**20

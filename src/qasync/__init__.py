@@ -73,33 +73,33 @@ if not QtModule:
 QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
 QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 
- if QtModuleName == "PyQt5":
-     from PyQt5 import QtWidgets
-     from PyQt5.QtCore import pyqtSlot as Slot
+if QtModuleName == "PyQt5":
+    from PyQt5 import QtWidgets
+    from PyQt5.QtCore import pyqtSlot as Slot
 
-     QApplication = QtWidgets.QApplication
-     AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
+    QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 
- elif QtModuleName == "PyQt6":
-     from PyQt6 import QtWidgets
-     from PyQt6.QtCore import pyqtSlot as Slot
+elif QtModuleName == "PyQt6":
+    from PyQt6 import QtWidgets
+    from PyQt6.QtCore import pyqtSlot as Slot
 
-     QApplication = QtWidgets.QApplication
-     AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
+    QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
 
- elif QtModuleName == "PySide2":
-     from PySide2 import QtWidgets
-     from PySide2.QtCore import Slot
+elif QtModuleName == "PySide2":
+    from PySide2 import QtWidgets
+    from PySide2.QtCore import Slot
 
-     QApplication = QtWidgets.QApplication
-     AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
+    QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 
- elif QtModuleName == "PySide6":
-     from PySide6 import QtWidgets
-     from PySide6.QtCore import Slot
+elif QtModuleName == "PySide6":
+    from PySide6 import QtWidgets
+    from PySide6.QtCore import Slot
 
-     QApplication = QtWidgets.QApplication
-     AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
+    QApplication = QtWidgets.QApplication
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
 
 from ._common import with_logger  # noqa
 

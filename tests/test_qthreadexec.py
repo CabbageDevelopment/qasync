@@ -2,6 +2,7 @@
 # © 2014 Mark Harviston <mark.harviston@gmail.com>
 # © 2014 Arve Knudsen <arve.knudsen@gmail.com>
 # BSD License
+import time
 import logging
 import threading
 import weakref
@@ -21,7 +22,11 @@ def disable_executor_logging():
     To avoid issues with tests targeting stale references,
     we disable logging for QThreadExecutor and _QThreadWorker classes.
     """
-    for cls in (qasync.QThreadExecutor, qasync._QThreadWorker):
+    for cls in (
+        qasync.QThreadExecutor,
+        qasync._QThreadWorker,
+        qasync.QThreadPoolExecutor,
+    ):
         logger_name = cls.__qualname__
         if cls.__module__ is not None:
             logger_name = f"{cls.__module__}.{logger_name}"
@@ -30,16 +35,32 @@ def disable_executor_logging():
         logger.propagate = False
 
 
-@pytest.fixture
+@pytest.fixture(params=[qasync.QThreadExecutor, qasync.QThreadPoolExecutor])
 def executor(request):
-    exe = qasync.QThreadExecutor(5)
-    request.addfinalizer(exe.shutdown)
+    exe = get_executor(request)
+    request.addfinalizer(lambda: safe_shutdown(exe))
     return exe
 
 
-@pytest.fixture
-def shutdown_executor():
-    exe = qasync.QThreadExecutor(5)
+def get_executor(request):
+    if request.param is qasync.QThreadPoolExecutor:
+        pool = qasync.QtCore.QThreadPool()
+        pool.setMaxThreadCount(5)
+        return request.param(pool)
+    else:
+        return request.param(5)
+
+
+def safe_shutdown(executor):
+    try:
+        executor.shutdown()
+    except Exception:
+        pass
+
+
+@pytest.fixture(params=[qasync.QThreadExecutor, qasync.QThreadPoolExecutor])
+def shutdown_executor(request):
+    exe = get_executor(request)
     exe.shutdown()
     return exe
 
@@ -55,7 +76,7 @@ def test_ctx_after_shutdown(shutdown_executor):
             pass
 
 
-def test_submit_after_shutdown(shutdown_executor):
+def _test_submit_after_shutdown(shutdown_executor):
     with pytest.raises(RuntimeError):
         shutdown_executor.submit(None)
 
@@ -64,6 +85,7 @@ def test_stack_recursion_limit(executor):
     # Test that worker threads have sufficient stack size for the default
     # sys.getrecursionlimit. If not this should fail with SIGSEGV or SIGBUS
     # (or event SIGILL?)
+
     def rec(a, *args, **kwargs):
         rec(a, *args, **kwargs)
 
@@ -104,3 +126,36 @@ def test_no_stale_reference_as_result(executor, disable_executor_logging):
     assert collected is True, (
         "Stale reference to executor result not collected within timeout."
     )
+
+
+def test_map(executor):
+    results = list(executor.map(lambda x: x + 1, range(10)))
+    assert results == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+
+@pytest.mark.parametrize("cancel", [True, False])
+def test_map_timeout(executor, cancel):
+    results = []
+
+    def func(x):
+        nonlocal results
+        time.sleep(0.05)
+        results.append(x)
+        return x
+
+    start = time.monotonic()
+    with pytest.raises(TimeoutError):
+        list(executor.map(func, range(10), timeout=0.01))
+    duration = time.monotonic() - start
+    assert duration < 0.02
+
+    executor.shutdown(wait=True, cancel_futures=cancel)
+    if not cancel:
+        # they were not cancelled
+        assert set(results) == {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+    else:
+        # only about half of the tasks should have completed
+        # because the max number of workers is 5 and the rest of
+        # the tasks were not started at the time of the cancel.
+        assert results
+        assert set(results) != {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}

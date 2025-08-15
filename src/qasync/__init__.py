@@ -8,7 +8,14 @@ Copyright (c) 2014 Arve Knudsen <arve.knudsen@gmail.com>
 BSD License
 """
 
-__all__ = ["QEventLoop", "QThreadExecutor", "QThreadPoolExecutor", "asyncSlot", "asyncClose", "asyncWrap"]
+__all__ = [
+    "QEventLoop",
+    "QThreadExecutor",
+    "QThreadPoolExecutor",
+    "asyncSlot",
+    "asyncClose",
+    "asyncWrap",
+]
 
 from ast import Not
 import asyncio
@@ -179,7 +186,7 @@ class QThreadExecutorBase:
         futures = list(map(lambda *args: self.submit(func, *args), *iterables))
         for future in futures:
             if timeout is not None:
-                yield future.result(timeout=time.monotonic()-start)
+                yield future.result(timeout=time.monotonic() - start)
             else:
                 yield future.result()
 

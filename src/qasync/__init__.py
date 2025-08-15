@@ -176,37 +176,12 @@ class QThreadExecutorBase:
         """Map the function to the iterables in a blocking way."""
         # iterables are consumed immediately
         start = time.monotonic()
-        if chunksize <= 1:
-            futures = list(map(lambda *args: self.submit(func, *args), *iterables))
-            try:
-                for future in futures:
-                    if timeout is not None:
-                        yield future.result(timeout=time.monotonic()-start)
-                    else:
-                        yield future.result()
-            except TimeoutError:
-                map(lambda f: f.cancel(), futures)
-                raise
-        else:
-            calls = list(map(lambda *args: args, *iterables))
-            chunks = (calls[i:i + chunksize] for i in range(0, len(calls), chunksize))
-            def helper(chunk):
-                """Helper to execute a chunk of calls"""
-                return [func(*args) for args in chunk]
-
-            # submit all the chunks
-            chunkfutures = [self.submit(helper, chunk) for chunk in chunks]
-
-            # await all the chunk futures
-            try:
-                for future in chunkfutures:
-                    if timeout is not None:
-                        results = future.result(timeout=time.monotonic()-start)
-                        for result in results:
-                            yield result
-            except TimeoutError:
-                map(lambda f: f.cancel(), chunkfutures)
-                raise
+        futures = list(map(lambda *args: self.submit(func, *args), *iterables))
+        for future in futures:
+            if timeout is not None:
+                yield future.result(timeout=time.monotonic()-start)
+            else:
+                yield future.result()
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         if self._been_shutdown:

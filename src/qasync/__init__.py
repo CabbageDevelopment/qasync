@@ -17,7 +17,6 @@ __all__ = [
     "asyncWrap",
 ]
 
-from ast import Not
 import asyncio
 import contextlib
 import functools
@@ -28,7 +27,7 @@ import logging
 import os
 import sys
 import time
-from concurrent.futures import CancelledError, Future, TimeoutError
+from concurrent.futures import Future
 from queue import Queue
 from weakref import WeakSet
 

@@ -202,6 +202,19 @@ class QThreadExecutorBase:
     def __exit__(self, *args):
         self.shutdown()
 
+    @staticmethod
+    def compute_stack_size():
+        # Match cpython/Python/thread_pthread.h
+        if sys.platform.startswith("darwin"):
+            stack_size = 16 * 2**20
+        elif sys.platform.startswith("freebsd"):
+            stack_size = 4 * 2**20
+        elif sys.platform.startswith("aix"):
+            stack_size = 2 * 2**20
+        else:
+            stack_size = None
+        return stack_size
+
 
 @with_logger
 class QThreadExecutor(QThreadExecutorBase):
@@ -222,13 +235,7 @@ class QThreadExecutor(QThreadExecutorBase):
         self.__max_workers = max_workers
         self.__queue = Queue()
         if stack_size is None:
-            # Match cpython/Python/thread_pthread.h
-            if sys.platform.startswith("darwin"):
-                stack_size = 16 * 2**20
-            elif sys.platform.startswith("freebsd"):
-                stack_size = 4 * 2**20
-            elif sys.platform.startswith("aix"):
-                stack_size = 2 * 2**20
+            stack_size = self.compute_stack_size()
         self.__workers = [
             _QThreadWorker(self.__queue, i + 1, stack_size) for i in range(max_workers)
         ]

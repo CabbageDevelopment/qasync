@@ -46,6 +46,9 @@ def executor(request):
 def get_executor(request):
     if request.param is qasync.QThreadPoolExecutor:
         pool = qasync.QtCore.QThreadPool()
+        stack_size = qasync.QThreadExecutorBase.compute_stack_size()
+        if stack_size is not None:
+            pool.setStackSize(stack_size)
         pool.setMaxThreadCount(5)
         return request.param(pool)
     else:

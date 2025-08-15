@@ -184,3 +184,4 @@ def test_default_pool_executor():
     with qasync.QThreadPoolExecutor() as executor:
         f = executor.submit(lambda: 42)
         assert f.result() == 42
+    executor.pool.waitForDone()

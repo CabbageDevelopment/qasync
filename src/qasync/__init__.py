@@ -320,8 +320,8 @@ class QThreadPoolExecutor(QThreadExecutorBase):
         if wait:
             for w in list(self.futures):
                 try:
-                    w.wait()
-                except CancelledError:
+                    w.result()
+                except Exception:
                     pass
 
 

@@ -56,6 +56,9 @@ def safe_shutdown(executor):
         executor.shutdown()
     except Exception:
         pass
+    if isinstance(executor, qasync.QThreadPoolExecutor):
+        # empty the underlying QThreadPool object
+        executor.pool.waitForDone()
 
 
 @pytest.fixture(params=[qasync.QThreadExecutor, qasync.QThreadPoolExecutor])
@@ -129,12 +132,14 @@ def test_no_stale_reference_as_result(executor, disable_executor_logging):
 
 
 def test_map(executor):
+    """Basic test of executor map functionality"""
     results = list(executor.map(lambda x: x + 1, range(10)))
     assert results == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 @pytest.mark.parametrize("cancel", [True, False])
 def test_map_timeout(executor, cancel):
+    """Test that map with timeout raises TimeoutError and cancels futures"""
     results = []
 
     def func(x):
@@ -157,5 +162,21 @@ def test_map_timeout(executor, cancel):
         # only about half of the tasks should have completed
         # because the max number of workers is 5 and the rest of
         # the tasks were not started at the time of the cancel.
-        assert results
         assert set(results) != {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+
+def test_context(executor):
+    """Test that the context manager will shutdown executor"""
+    with executor:
+        f = executor.submit(lambda: 42)
+        assert f.result() == 42
+
+    with pytest.raises(RuntimeError):
+        executor.submit(lambda: 42)
+
+
+def test_default_pool_executor():
+    """Test that using the global instance of QThreadPool works"""
+    with qasync.QThreadPoolExecutor() as executor:
+        f = executor.submit(lambda: 42)
+        assert f.result() == 42

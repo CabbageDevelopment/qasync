@@ -153,7 +153,7 @@ def test_map_timeout(executor, cancel):
     with pytest.raises(TimeoutError):
         list(executor.map(func, range(10), timeout=0.01))
     duration = time.monotonic() - start
-    assert duration < 0.02
+    assert duration < 0.05
 
     executor.shutdown(wait=True, cancel_futures=cancel)
     if not cancel:

@@ -4,7 +4,9 @@
 # BSD License
 import logging
 import threading
+import time
 import weakref
+from concurrent.futures import CancelledError
 
 import pytest
 
@@ -118,3 +120,28 @@ def test_context(executor):
         # but will fail when we submit
         with pytest.raises(RuntimeError):
             executor.submit(lambda: 42)
+
+
+@pytest.mark.parametrize("cancel", [True, False])
+def test_shutdown_cancel_futures(executor, cancel):
+    """Test that shutdown with cancel_futures=True cancels all remaining futures in the queue."""
+
+    def task():
+        time.sleep(0.01)
+
+    # Submit ten tasks to the executor
+    futures = [executor.submit(task) for _ in range(10)]
+    # shut it down
+    executor.shutdown(cancel_futures=cancel)
+
+    cancels = 0
+    for future in futures:
+        try:
+            future.result(timeout=0.01)
+        except CancelledError:
+            cancels += 1
+
+    if cancel:
+        assert cancels > 0
+    else:
+        assert cancels == 0

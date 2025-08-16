@@ -216,10 +216,17 @@ class QThreadExecutor:
     def map(self, func, *iterables, timeout=None):
         raise NotImplementedError("use as_completed on the event loop")
 
-    def shutdown(self, wait=True):
+    def shutdown(self, wait=True, *, cancel_futures=False):
         with self.__shutdown_lock:
             self.__been_shutdown = True
             self._logger.debug("Shutting down")
+            if cancel_futures:
+                # pop all the futures and cancel them
+                while not self.__queue.empty():
+                    item = self.__queue.get_nowait()
+                    if item is not None:
+                        future, _, _, _ = item
+                        future.cancel()
             for i in range(len(self.__workers)):
                 # Signal workers to stop
                 self.__queue.put(None)

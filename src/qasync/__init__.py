@@ -214,7 +214,25 @@ class QThreadExecutor:
             return future
 
     def map(self, func, *iterables, timeout=None):
-        raise NotImplementedError("use as_completed on the event loop")
+        deadline = time.monotonic() + timeout if timeout is not None else None
+        futures = [self.submit(func, *args) for args in zip(*iterables)]
+
+        # must have generator as a closure so that the submit occurs before first iteration
+        def generator():
+            try:
+                futures.reverse()
+                while futures:
+                    if deadline is not None:
+                        yield _result_or_cancel(
+                            futures.pop(), timeout=deadline - time.monotonic()
+                        )
+                    else:
+                        yield _result_or_cancel(futures.pop())
+            finally:
+                for future in futures:
+                    future.cancel()
+
+        return generator()
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         with self.__shutdown_lock:
@@ -239,6 +257,16 @@ class QThreadExecutor:
 
     def __exit__(self, *args):
         self.shutdown()
+
+
+def _result_or_cancel(fut, timeout=None):
+    try:
+        try:
+            return fut.result(timeout)
+        finally:
+            fut.cancel()
+    finally:
+        del fut  # break reference cycle in exceptions
 
 
 def _format_handle(handle: asyncio.Handle):

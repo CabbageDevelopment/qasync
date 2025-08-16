@@ -16,7 +16,7 @@ async def master():
 
     await first_50(progress)
     loop = asyncio.get_running_loop()
-    with QThreadExecutor(1) as exec:
+    with QThreadExecutor(1).closing() as exec:
         await loop.run_in_executor(exec, functools.partial(last_50, progress), loop)
 
 

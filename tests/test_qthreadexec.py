@@ -8,6 +8,7 @@ import time
 import weakref
 from concurrent.futures import CancelledError, TimeoutError
 from itertools import islice
+from unittest import mock
 
 import pytest
 
@@ -246,3 +247,21 @@ def test_map_close(executor):
     m.close()
     executor.shutdown(wait=True, cancel_futures=False)
     assert len(results) < 10, "Some tasks should have been cancelled"
+
+
+def test_closing(executor):
+    """Test that closing context manager works as expected"""
+    # mock the shutdown method of the executor
+    with mock.patch.object(executor, "shutdown") as mock_shutdown:
+        with executor.closing():
+            pass
+
+        # ensure that shutdown was called with (False, cancel_futures=False)
+        mock_shutdown.assert_called_once_with(wait=False, cancel_futures=False)
+
+    with mock.patch.object(executor, "shutdown") as mock_shutdown:
+        with executor.closing(wait=True, cancel_futures=True):
+            pass
+
+        # ensure that shutdown was called with (False, cancel_futures=False)
+        mock_shutdown.assert_called_once_with(wait=True, cancel_futures=True)

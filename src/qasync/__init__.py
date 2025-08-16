@@ -258,6 +258,14 @@ class QThreadExecutor:
     def __exit__(self, *args):
         self.shutdown()
 
+    @contextlib.contextmanager
+    def closing(self, *, wait=False, cancel_futures=False):
+        """Explicit context manager to do shutdown, with Wait=False by default"""
+        try:
+            yield self
+        finally:
+            self.shutdown(wait=wait, cancel_futures=cancel_futures)
+
 
 def _result_or_cancel(fut, timeout=None):
     try:

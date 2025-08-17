@@ -170,6 +170,17 @@ class _QThreadWorker(QtCore.QThread):
         super().wait()
 
 
+def _result_or_cancel(fut, timeout=None):
+    try:
+        try:
+            return fut.result(timeout)
+        finally:
+            fut.cancel()
+    finally:
+        # Break a reference cycle with the exception in self._exception
+        del fut
+
+
 class QThreadExecutorBase:
     def __init__(self):
         self._been_shutdown = False
@@ -180,14 +191,29 @@ class QThreadExecutorBase:
 
     def map(self, func, *iterables, timeout=None, chunksize=1):
         """Map the function to the iterables in a blocking way."""
-        # iterables are consumed immediately
-        start = time.monotonic()
-        futures = list(map(lambda *args: self.submit(func, *args), *iterables))
-        for future in futures:
-            if timeout is not None:
-                yield future.result(timeout=time.monotonic() - start)
-            else:
-                yield future.result()
+        # based on standard python implementation for BaseExecutor.map
+        end_time = time.monotonic() + timeout if timeout is not None else None
+        futures = [self.submit(func, *args) for args in zip(*iterables)]
+
+        # the generator must be an inner function so that map() and the submit
+        # occurs immediately.
+        def generator():
+            # reverse and pop to not keep future references around
+            # (for reference cycles in exceptions)
+            try:
+                futures.reverse()
+                while futures:
+                    if end_time is not None:
+                        yield _result_or_cancel(
+                            futures.pop(), timeout=end_time - time.monotonic()
+                        )
+                    else:
+                        yield _result_or_cancel(futures.pop())
+            finally:
+                for future in futures:
+                    future.cancel()
+
+        return generator()
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         if self._been_shutdown:

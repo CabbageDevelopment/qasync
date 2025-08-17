@@ -7,6 +7,7 @@ import threading
 import time
 import weakref
 from concurrent.futures import TimeoutError
+from itertools import islice
 
 import pytest
 
@@ -140,9 +141,11 @@ def test_map(executor):
     results = list(executor.map(lambda x: x + 1, range(10)))
     assert results == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
+    results = list(executor.map(lambda x, y: x + y, range(10), range(9)))
+    assert results == [0, 2, 4, 6, 8, 10, 12, 14, 16]
 
-@pytest.mark.parametrize("cancel", [True, False])
-def test_map_timeout(executor, cancel):
+
+def test_map_timeout(executor):
     """Test that map with timeout raises TimeoutError and cancels futures"""
     results = []
 
@@ -158,15 +161,61 @@ def test_map_timeout(executor, cancel):
     duration = time.monotonic() - start
     assert duration < 0.05
 
+    executor.shutdown(wait=True)
+    # only about half of the tasks should have completed
+    # because the max number of workers is 5 and the rest of
+    # the tasks were not started at the time of the cancel.
+    assert set(results) != {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+
+def test_map_error(executor):
+    """Test that map with an exception will raise, and remaining tasks are cancelled"""
+    results = []
+
+    def func(x):
+        nonlocal results
+        time.sleep(0.05)
+        if len(results) == 5:
+            raise ValueError("Test error")
+        results.append(x)
+        return x
+
+    with pytest.raises(ValueError):
+        list(executor.map(func, range(15)))
+
+    executor.shutdown(wait=True, cancel_futures=False)
+    assert len(results) <= 10, "Final 5 at least should have been cancelled"
+
+
+@pytest.mark.parametrize("cancel", [True, False])
+def test_map_shutdown(executor, cancel):
+    results = []
+
+    def func(x):
+        nonlocal results
+        time.sleep(0.05)
+        results.append(x)
+        return x
+
+    # Get the first few results.
+    # Keep the iterator alive so that it isn't closed when its reference is dropped.
+    m = executor.map(func, range(15))
+    values = list(islice(m, 5))
+    assert values == [0, 1, 2, 3, 4]
+
     executor.shutdown(wait=True, cancel_futures=cancel)
-    if not cancel:
-        # they were not cancelled
-        assert set(results) == {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+    if cancel:
+        assert len(results) < 15, "Some tasks should have been cancelled"
     else:
-        # only about half of the tasks should have completed
-        # because the max number of workers is 5 and the rest of
-        # the tasks were not started at the time of the cancel.
-        assert set(results) != {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+        assert len(results) == 15, "All tasks should have been completed"
+
+
+def test_map_start(executor):
+    """Test that map starts tasks immediately, before iterating"""
+    e = threading.Event()
+    m = executor.map(lambda x: (e.set(), x), range(1))
+    e.wait(timeout=0.1)
+    assert list(m) == [(None, 0)]
 
 
 def test_context(executor):

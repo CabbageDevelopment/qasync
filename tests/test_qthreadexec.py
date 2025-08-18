@@ -44,15 +44,16 @@ def shutdown_executor():
     return exe
 
 
-def test_shutdown_after_shutdown(shutdown_executor):
-    with pytest.raises(RuntimeError):
-        shutdown_executor.shutdown()
+@pytest.mark.parametrize("wait", [True, False])
+def test_shutdown_after_shutdown(shutdown_executor, wait):
+    # it is safe to shutdown twice
+    shutdown_executor.shutdown(wait=wait)
 
 
 def test_ctx_after_shutdown(shutdown_executor):
-    with pytest.raises(RuntimeError):
-        with shutdown_executor:
-            pass
+    # it is safe to enter and exit the context after shutdown
+    with shutdown_executor:
+        pass
 
 
 def test_submit_after_shutdown(shutdown_executor):
@@ -104,3 +105,16 @@ def test_no_stale_reference_as_result(executor, disable_executor_logging):
     assert collected is True, (
         "Stale reference to executor result not collected within timeout."
     )
+
+
+def test_context(executor):
+    """Test that the context manager will shutdown executor"""
+    with executor:
+        f = executor.submit(lambda: 42)
+        assert f.result() == 42
+
+    # it can be entered again
+    with executor:
+        # but will fail when we submit
+        with pytest.raises(RuntimeError):
+            executor.submit(lambda: 42)

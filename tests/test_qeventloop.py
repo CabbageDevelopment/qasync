@@ -18,6 +18,18 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import pytest
 
 import qasync
+from qasync import QtModuleName
+
+# flags for skipping certain tests for PySide6
+# This module has known issues causing crashes if certain
+# combinations of tests are invoked, likely caused by some internal problems.
+# current experimentation shows that it is sufficient to skip the socket pair
+# tests and the event-loop-on-qthread tests to avoid crashes later on in the suite.
+# Setting any one of these flags true reduces the frequency of crashes
+# but does not eliminate them.
+skip_process = False
+skip_socket = True
+skip_qthread = True
 
 
 @pytest.fixture
@@ -65,6 +77,8 @@ def loop(request, application):
 )
 def executor(request):
     exc_cls = request.param
+    if exc_cls is ProcessPoolExecutor and QtModuleName == "PySide6" and skip_process:
+        pytest.skip("subprocess is unreliable for  PySide6")
     if exc_cls is None:
         return None
 
@@ -130,6 +144,7 @@ class TestCanRunTasksInExecutor:
         logging.debug("start blocking task()")
 
 
+@pytest.mark.skipif(QtModuleName == "PySide6" and skip_process, reason="subprocess is unreliable on PySide6")
 def test_can_execute_subprocess(loop):
     """Verify that a subprocess can be executed."""
 
@@ -143,6 +158,7 @@ def test_can_execute_subprocess(loop):
     loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
+@pytest.mark.skipif(QtModuleName == "PySide6" and skip_process, reason="subprocess is unreliable on PySide6")
 def test_can_read_subprocess(loop):
     """Verify that a subprocess's data can be read from stdout."""
 
@@ -163,6 +179,7 @@ def test_can_read_subprocess(loop):
     loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
+@pytest.mark.skipif(QtModuleName == "PySide6" and skip_process, reason="subprocess is unreliable on PySide6")
 def test_can_communicate_subprocess(loop):
     """Verify that a subprocess's data can be passed in/out via stdin/stdout."""
 
@@ -184,6 +201,7 @@ def test_can_communicate_subprocess(loop):
     loop.run_until_complete(asyncio.wait_for(mycoro(), timeout=10.0))
 
 
+@pytest.mark.skipif(QtModuleName == "PySide6" and skip_process, reason="subprocess is unreliable on PySide6")
 def test_can_terminate_subprocess(loop):
     """Verify that a subprocess can be terminated."""
 
@@ -309,6 +327,8 @@ def sock_pair(request):
 
     If socket.socketpair isn't available, we emulate it.
     """
+    if QtModuleName == "PySide6" and skip_socket:
+        pytest.skip("SocketPairs are unreliable on PySide6")
 
     def fin():
         if client_sock is not None:
@@ -887,6 +907,7 @@ def test_run_forever_custom_exit_code(loop, application):
             application.exec_ = orig_exec
 
 
+@pytest.mark.skipif(QtModuleName == "PySide6" and skip_qthread, reason="unreliable on PySide6")
 def test_qeventloop_in_qthread():
     class CoroutineExecutorThread(qasync.QtCore.QThread):
         def __init__(self, coro):

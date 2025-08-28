@@ -22,6 +22,7 @@ import sys
 import time
 from concurrent.futures import Future
 from queue import Queue
+from threading import Lock
 
 logger = logging.getLogger(__name__)
 
@@ -191,49 +192,89 @@ class QThreadExecutor:
         self.__workers = [
             _QThreadWorker(self.__queue, i + 1, stack_size) for i in range(max_workers)
         ]
+        self.__shutdown_lock = Lock()
         self.__been_shutdown = False
 
         for w in self.__workers:
             w.start()
 
     def submit(self, callback, *args, **kwargs):
-        if self.__been_shutdown:
-            raise RuntimeError("QThreadExecutor has been shutdown")
+        with self.__shutdown_lock:
+            if self.__been_shutdown:
+                raise RuntimeError("QThreadExecutor has been shutdown")
 
-        future = Future()
-        self._logger.debug(
-            "Submitting callback %s with args %s and kwargs %s to thread worker queue",
-            callback,
-            args,
-            kwargs,
-        )
-        self.__queue.put((future, callback, args, kwargs))
-        return future
+            future = Future()
+            self._logger.debug(
+                "Submitting callback %s with args %s and kwargs %s to thread worker queue",
+                callback,
+                args,
+                kwargs,
+            )
+            self.__queue.put((future, callback, args, kwargs))
+            return future
 
     def map(self, func, *iterables, timeout=None):
-        raise NotImplementedError("use as_completed on the event loop")
+        deadline = time.monotonic() + timeout if timeout is not None else None
+        futures = [self.submit(func, *args) for args in zip(*iterables)]
 
-    def shutdown(self, wait=True):
-        if self.__been_shutdown:
-            raise RuntimeError("QThreadExecutor has been shutdown")
+        # must have generator as a closure so that the submit occurs before first iteration
+        def generator():
+            try:
+                futures.reverse()
+                while futures:
+                    if deadline is not None:
+                        yield _result_or_cancel(
+                            futures.pop(), timeout=deadline - time.monotonic()
+                        )
+                    else:
+                        yield _result_or_cancel(futures.pop())
+            finally:
+                for future in futures:
+                    future.cancel()
 
-        self.__been_shutdown = True
+        return generator()
 
-        self._logger.debug("Shutting down")
-        for i in range(len(self.__workers)):
-            # Signal workers to stop
-            self.__queue.put(None)
-        if wait:
-            for w in self.__workers:
-                w.wait()
+    def shutdown(self, wait=True, *, cancel_futures=False):
+        with self.__shutdown_lock:
+            self.__been_shutdown = True
+            self._logger.debug("Shutting down")
+            if cancel_futures:
+                # pop all the futures and cancel them
+                while not self.__queue.empty():
+                    item = self.__queue.get_nowait()
+                    if item is not None:
+                        future, _, _, _ = item
+                        future.cancel()
+            for i in range(len(self.__workers)):
+                # Signal workers to stop
+                self.__queue.put(None)
+            if wait:
+                for w in self.__workers:
+                    w.wait()
 
     def __enter__(self, *args):
-        if self.__been_shutdown:
-            raise RuntimeError("QThreadExecutor has been shutdown")
         return self
 
     def __exit__(self, *args):
         self.shutdown()
+
+    @contextlib.contextmanager
+    def closing(self, *, wait=False, cancel_futures=False):
+        """Explicit context manager to do shutdown, with Wait=False by default"""
+        try:
+            yield self
+        finally:
+            self.shutdown(wait=wait, cancel_futures=cancel_futures)
+
+
+def _result_or_cancel(fut, timeout=None):
+    try:
+        try:
+            return fut.result(timeout)
+        finally:
+            fut.cancel()
+    finally:
+        del fut  # break reference cycle in exceptions
 
 
 def _format_handle(handle: asyncio.Handle):

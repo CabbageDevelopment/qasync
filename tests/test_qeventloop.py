@@ -793,6 +793,51 @@ def test_not_running_immediately_after_stopped(loop):
     assert not loop.is_running()
 
 
+def test_async_slot(loop):
+    no_args_called = asyncio.Event()
+    with_args_called = asyncio.Event()
+    trailing_args_called = asyncio.Event()
+
+    async def slot_no_args():
+        no_args_called.set()
+
+    async def slot_with_args(flag: bool):
+        assert flag
+        with_args_called.set()
+
+    async def slot_trailing_args(flag: bool):
+        assert flag
+        trailing_args_called.set()
+
+    async def slot_signature_mismatch(_: bool): ...
+
+    async def main():
+        # passing kwargs to the underlying Slot such as name, arguments, return
+        sig = qasync._make_signaller(qasync.QtCore)
+        sig.signal.connect(qasync.asyncSlot(name="slot")(slot_no_args))
+        sig.signal.emit()
+
+        sig1 = qasync._make_signaller(qasync.QtCore, bool)
+        sig1.signal.connect(qasync.asyncSlot(bool)(slot_with_args))
+        sig1.signal.emit(True)
+
+        # when a signal produces more arguments than a slot, trailing args are removed
+        sig2 = qasync._make_signaller(qasync.QtCore, bool, bool)
+        sig2.signal.connect(qasync.asyncSlot()(slot_trailing_args))
+        sig2.signal.emit(True, False)
+
+        # signature mismatch when called
+        with pytest.raises(TypeError):
+            qasync.asyncSlot(bool)(slot_signature_mismatch)()
+
+        all_done = asyncio.gather(
+            no_args_called.wait(), with_args_called.wait(), trailing_args_called.wait()
+        )
+        await asyncio.wait_for(all_done, timeout=1.0)
+
+    loop.run_until_complete(main())
+
+
 @pytest.mark.parametrize(
     "async_wrap, expect_async_called, expect_exception",
     [(False, False, True), (True, True, False)],
@@ -829,7 +874,6 @@ def test_async_wrap(
                 await coro  # avoid warnings about unawaited coroutines
         assert res == 1
         main_called = True
-        
 
     exceptions = []
     loop.set_exception_handler(lambda loop, context: exceptions.append(context))
@@ -916,6 +960,7 @@ def test_qeventloop_in_qthread():
     assert event.wait(timeout=1), "Coroutine did not execute successfully"
 
     thread.join()  # Ensure thread cleanup
+
 
 def teardown_module(module):
     """

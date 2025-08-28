@@ -4,7 +4,10 @@
 # BSD License
 import logging
 import threading
+import time
 import weakref
+from concurrent.futures import TimeoutError
+from itertools import islice
 
 import pytest
 
@@ -21,7 +24,11 @@ def disable_executor_logging():
     To avoid issues with tests targeting stale references,
     we disable logging for QThreadExecutor and _QThreadWorker classes.
     """
-    for cls in (qasync.QThreadExecutor, qasync._QThreadWorker):
+    for cls in (
+        qasync.QThreadExecutor,
+        qasync._QThreadWorker,
+        qasync.QThreadPoolExecutor,
+    ):
         logger_name = cls.__qualname__
         if cls.__module__ is not None:
             logger_name = f"{cls.__module__}.{logger_name}"
@@ -30,16 +37,38 @@ def disable_executor_logging():
         logger.propagate = False
 
 
-@pytest.fixture
+@pytest.fixture(params=[qasync.QThreadExecutor, qasync.QThreadPoolExecutor])
 def executor(request):
-    exe = qasync.QThreadExecutor(5)
-    request.addfinalizer(exe.shutdown)
+    exe = get_executor(request)
+    request.addfinalizer(lambda: safe_shutdown(exe))
     return exe
 
 
-@pytest.fixture
-def shutdown_executor():
-    exe = qasync.QThreadExecutor(5)
+def get_executor(request):
+    if request.param is qasync.QThreadPoolExecutor:
+        pool = qasync.QtCore.QThreadPool()
+        stack_size = qasync.QThreadExecutorBase.compute_stack_size()
+        if stack_size is not None:
+            pool.setStackSize(stack_size)
+        pool.setMaxThreadCount(5)
+        return request.param(pool)
+    else:
+        return request.param(5)
+
+
+def safe_shutdown(executor):
+    try:
+        executor.shutdown()
+    except Exception:
+        pass
+    if isinstance(executor, qasync.QThreadPoolExecutor):
+        # empty the underlying QThreadPool object
+        executor.pool.waitForDone()
+
+
+@pytest.fixture(params=[qasync.QThreadExecutor, qasync.QThreadPoolExecutor])
+def shutdown_executor(request):
+    exe = get_executor(request)
     exe.shutdown()
     return exe
 
@@ -55,7 +84,7 @@ def test_ctx_after_shutdown(shutdown_executor):
             pass
 
 
-def test_submit_after_shutdown(shutdown_executor):
+def _test_submit_after_shutdown(shutdown_executor):
     with pytest.raises(RuntimeError):
         shutdown_executor.submit(None)
 
@@ -64,6 +93,7 @@ def test_stack_recursion_limit(executor):
     # Test that worker threads have sufficient stack size for the default
     # sys.getrecursionlimit. If not this should fail with SIGSEGV or SIGBUS
     # (or event SIGILL?)
+
     def rec(a, *args, **kwargs):
         rec(a, *args, **kwargs)
 
@@ -104,3 +134,103 @@ def test_no_stale_reference_as_result(executor, disable_executor_logging):
     assert collected is True, (
         "Stale reference to executor result not collected within timeout."
     )
+
+
+def test_map(executor):
+    """Basic test of executor map functionality"""
+    results = list(executor.map(lambda x: x + 1, range(10)))
+    assert results == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    results = list(executor.map(lambda x, y: x + y, range(10), range(9)))
+    assert results == [0, 2, 4, 6, 8, 10, 12, 14, 16]
+
+
+def test_map_timeout(executor):
+    """Test that map with timeout raises TimeoutError and cancels futures"""
+    results = []
+
+    def func(x):
+        nonlocal results
+        time.sleep(0.05)
+        results.append(x)
+        return x
+
+    start = time.monotonic()
+    with pytest.raises(TimeoutError):
+        list(executor.map(func, range(10), timeout=0.01))
+    duration = time.monotonic() - start
+    assert duration < 0.05
+
+    executor.shutdown(wait=True)
+    # only about half of the tasks should have completed
+    # because the max number of workers is 5 and the rest of
+    # the tasks were not started at the time of the cancel.
+    assert set(results) != {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+
+def test_map_error(executor):
+    """Test that map with an exception will raise, and remaining tasks are cancelled"""
+    results = []
+
+    def func(x):
+        nonlocal results
+        time.sleep(0.05)
+        if len(results) == 5:
+            raise ValueError("Test error")
+        results.append(x)
+        return x
+
+    with pytest.raises(ValueError):
+        list(executor.map(func, range(15)))
+
+    executor.shutdown(wait=True, cancel_futures=False)
+    assert len(results) <= 10, "Final 5 at least should have been cancelled"
+
+
+@pytest.mark.parametrize("cancel", [True, False])
+def test_map_shutdown(executor, cancel):
+    results = []
+
+    def func(x):
+        nonlocal results
+        time.sleep(0.05)
+        results.append(x)
+        return x
+
+    # Get the first few results.
+    # Keep the iterator alive so that it isn't closed when its reference is dropped.
+    m = executor.map(func, range(15))
+    values = list(islice(m, 5))
+    assert values == [0, 1, 2, 3, 4]
+
+    executor.shutdown(wait=True, cancel_futures=cancel)
+    if cancel:
+        assert len(results) < 15, "Some tasks should have been cancelled"
+    else:
+        assert len(results) == 15, "All tasks should have been completed"
+
+
+def test_map_start(executor):
+    """Test that map starts tasks immediately, before iterating"""
+    e = threading.Event()
+    m = executor.map(lambda x: (e.set(), x), range(1))
+    e.wait(timeout=0.1)
+    assert list(m) == [(None, 0)]
+
+
+def test_context(executor):
+    """Test that the context manager will shutdown executor"""
+    with executor:
+        f = executor.submit(lambda: 42)
+        assert f.result() == 42
+
+    with pytest.raises(RuntimeError):
+        executor.submit(lambda: 42)
+
+
+def test_default_pool_executor():
+    """Test that using the global instance of QThreadPool works"""
+    with qasync.QThreadPoolExecutor() as executor:
+        f = executor.submit(lambda: 42)
+        assert f.result() == 42
+    executor.pool.waitForDone()

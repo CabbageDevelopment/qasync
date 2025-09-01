@@ -366,6 +366,10 @@ class _QEventLoop:
         self._timer = _SimpleTimer()
 
         self.__call_soon_signaller = signaller = _make_signaller(QtCore, object, tuple)
+        # Parent helper QObjects to the application for safe lifetime management
+        self._timer.setParent(self.__app)
+        signaller.setParent(self.__app)
+
         self.__call_soon_signal = signaller.signal
         self.__call_soon_signal.connect(
             lambda callback, args: self.call_soon(callback, *args)

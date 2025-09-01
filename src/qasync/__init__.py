@@ -467,26 +467,48 @@ class _QEventLoop:
         if self.is_closed():
             return
 
+        # the following code places try/catch around possibly failing
+        # operations for safety and to guard against implementation
+        # difference in the QT bindings.
+
         self.__log_debug("Closing event loop...")
+        # Catch exceptions for safety between bindings.
+        poller = getattr(self, "_ProactorEventLoop__event_poller", None)
+        if poller is not None:
+            poller.stop()
+
         if self.__default_executor is not None:
             self.__default_executor.shutdown()
 
-        if self.__call_soon_signal:
+        # Disconnect thread-safe signaller and schedule deletion of helper QObjects
+        try:
             self.__call_soon_signal.disconnect()
+        except Exception:
+            pass
+        self.__call_soon_signaller.deleteLater()
 
-        super().close()
-
+        # Stop timers first to avoid late invocations during teardown
         self._timer.stop()
-        self.__app = None
+        self._timer.deleteLater()
 
+        # Disable and disconnect any remaining notifiers before closing
         for notifier in itertools.chain(
             self._read_notifiers.values(), self._write_notifiers.values()
         ):
             notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
+            try:
+                notifier.activated["int"].disconnect()
+            except Exception:
+                pass
+            notifier.deleteLater()
 
-        self._read_notifiers = None
-        self._write_notifiers = None
+        self._read_notifiers.clear()
+        self._write_notifiers.clear()
+
+        super().close()
+
+        # Finally, clear app reference
+        self.__app = None
 
     def call_later(self, delay, callback, *args, context=None):
         """Register callback to be invoked after a certain delay."""

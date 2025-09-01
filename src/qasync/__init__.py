@@ -539,11 +539,13 @@ class _QEventLoop:
             existing.activated["int"].disconnect()
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Type.Read)
+        notifier = QtCore.QSocketNotifier(
+            _fileno(fd), QtCore.QSocketNotifier.Type.Read, self.__app
+        )
         notifier.setEnabled(True)
         self.__log_debug("Adding reader callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
-            lambda: self.__on_notifier_ready(
+            lambda *_: self.__on_notifier_ready(
                 self._read_notifiers, notifier, fd, callback, args
             )  # noqa: C812
         )
@@ -580,11 +582,12 @@ class _QEventLoop:
         notifier = QtCore.QSocketNotifier(
             _fileno(fd),
             QtCore.QSocketNotifier.Type.Write,
+            self.__app,
         )
         notifier.setEnabled(True)
         self.__log_debug("Adding writer callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
-            lambda: self.__on_notifier_ready(
+            lambda *_: self.__on_notifier_ready(
                 self._write_notifiers, notifier, fd, callback, args
             )  # noqa: C812
         )

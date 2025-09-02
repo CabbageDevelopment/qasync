@@ -38,6 +38,9 @@ class _ProactorEventLoop(asyncio.ProactorEventLoop):
         self.__event_signal.connect(self._process_events)
         self.__event_poller = _EventPoller(self.__event_signal)
 
+    def get_proactor_event_poller(self):
+        return self.__event_poller
+
     def _process_events(self, events):
         """Process events from proactor."""
         for f, callback, transferred, key, ov in events:

@@ -476,8 +476,11 @@ class _QEventLoop:
 
         self.__log_debug("Closing event loop...")
         # Catch exceptions for safety between bindings.
-        poller = getattr(self, "_ProactorEventLoop__event_poller", None)
-        if poller is not None:
+        try:
+            poller = self.get_proactor_event_poller()
+        except AttributeError:
+            pass
+        else:
             poller.stop()
 
         if self.__default_executor is not None:

@@ -210,6 +210,7 @@ class _EventPoller:
 
     def __init__(self, sig_events):
         self.sig_events = sig_events
+        self.__worker = None
 
     def start(self, proactor):
         self._logger.debug("Starting (proactor: %s)...", proactor)
@@ -218,4 +219,6 @@ class _EventPoller:
 
     def stop(self):
         self._logger.debug("Stopping worker thread...")
-        self.__worker.stop()
+        if self.__worker is not None:
+            self.__worker.stop()
+            self.__worker = None

@@ -594,8 +594,8 @@ def test_regression_bug13(loop, sock_pair):
 
         loop._add_reader(c_sock.fileno(), cb1)
 
-    _client_task = asyncio.ensure_future(client_coro())
-    _server_task = asyncio.ensure_future(server_coro())
+    _client_task = loop.create_task(client_coro())
+    _server_task = loop.create_task(server_coro())
 
     both_done = asyncio.gather(client_done, server_done)
     loop.run_until_complete(asyncio.wait_for(both_done, timeout=1.0))
@@ -639,8 +639,8 @@ def test_add_reader_replace(loop, sock_pair):
         loop._remove_reader(c_sock.fileno())
         assert (await loop.sock_recv(c_sock, 3)) == b"foo"
 
-    client_done = asyncio.ensure_future(client_coro())
-    server_done = asyncio.ensure_future(server_coro())
+    client_done = loop.create_task(client_coro())
+    server_done = loop.create_task(server_coro())
 
     both_done = asyncio.wait(
         [server_done, client_done], return_when=asyncio.FIRST_EXCEPTION
@@ -757,7 +757,7 @@ def test_exception_handler(loop):
         handler_called = True
 
     loop.set_exception_handler(exct_handler)
-    asyncio.ensure_future(future_except())
+    loop.create_task(future_except())
     loop.run_forever()
 
     assert coro_run
@@ -774,7 +774,11 @@ def test_exception_handler_simple(loop):
     loop.set_exception_handler(exct_handler)
     fut1 = asyncio.Future()
     fut1.set_exception(ExceptionTester())
-    asyncio.ensure_future(fut1)
+
+    async def coro(future):
+        await future
+
+    loop.create_task(coro(fut1))
     del fut1
     loop.call_later(0.1, loop.stop)
     loop.run_forever()

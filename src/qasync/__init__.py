@@ -417,25 +417,24 @@ class _QEventLoop:
         if self.__is_running:
             raise RuntimeError("Event loop already running")
 
+        async def wrapper():
+            try:
+                return await future
+            finally:
+                self.stop()
+
         self.__log_debug("Running %s until complete", future)
-        future = asyncio.ensure_future(future, loop=self)
+        task = self.create_task(wrapper())
 
-        def stop(*args):
-            self.stop()  # noqa
-
-        future.add_done_callback(stop)
-        try:
-            self.run_forever()
-        finally:
-            future.remove_done_callback(stop)
+        self.run_forever()
         self.__app.eventDispatcher().processEvents(
             AllEvents
         )  # run loop one last time to process all the events
-        if not future.done():
+        if not task.done():
             raise RuntimeError("Event loop stopped before Future completed.")
 
         self.__log_debug("Future %s finished running", future)
-        return future.result()
+        return task.result()
 
     def stop(self):
         """Stop event loop."""
@@ -799,9 +798,15 @@ def asyncClose(fn):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        f = asyncio.ensure_future(fn(*args, **kwargs))
-        while not f.done():
-            QApplication.instance().processEvents()
+        loop = asyncio.get_running_loop()
+        assert isinstance(loop, QEventLoop)
+        task = loop.create_task(fn(*args, **kwargs))
+        while not task.done():
+            QApplication.processEvents(AllEvents)
+        try:
+            return task.result()
+        except asyncio.CancelledError:
+            pass
 
     return wrapper
 
@@ -809,13 +814,11 @@ def asyncClose(fn):
 def asyncSlot(*args, **kwargs):
     """Make a Qt async slot run on asyncio loop."""
 
-    def _error_handler(task):
+    async def _error_handler(fn, args, kwargs):
         try:
-            task.result()
+            await fn(*args, **kwargs)
         except Exception:
             sys.excepthook(*sys.exc_info())
-        except asyncio.CancelledError:
-            pass
 
     def outer_decorator(fn):
         @Slot(*args, **kwargs)
@@ -838,8 +841,7 @@ def asyncSlot(*args, **kwargs):
                             "asyncSlot was not callable from Signal. Potential signature mismatch."
                         )
                 else:
-                    task = asyncio.ensure_future(fn(*args, **kwargs))
-                    task.add_done_callback(_error_handler)
+                    task = asyncio.create_task(_error_handler(fn, args, kwargs))
                     return task
 
         return wrapper

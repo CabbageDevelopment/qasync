@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from unittest import mock
 
 import pytest
 
@@ -801,6 +802,8 @@ def test_async_slot(loop):
     no_args_called = asyncio.Event()
     with_args_called = asyncio.Event()
     trailing_args_called = asyncio.Event()
+    error_called = asyncio.Event()
+    cancel_called = asyncio.Event()
 
     async def slot_no_args():
         no_args_called.set()
@@ -814,6 +817,14 @@ def test_async_slot(loop):
         trailing_args_called.set()
 
     async def slot_signature_mismatch(_: bool): ...
+
+    async def slot_with_error():
+        error_called.set()
+        raise ValueError("Test")
+
+    async def slot_with_cancel():
+        cancel_called.set()
+        raise asyncio.CancelledError()
 
     async def main():
         # passing kwargs to the underlying Slot such as name, arguments, return
@@ -838,6 +849,73 @@ def test_async_slot(loop):
             no_args_called.wait(), with_args_called.wait(), trailing_args_called.wait()
         )
         await asyncio.wait_for(all_done, timeout=1.0)
+
+        with mock.patch.object(sys, "excepthook") as excepthook:
+            sig3 = qasync._make_signaller(qasync.QtCore)
+            sig3.signal.connect(qasync.asyncSlot()(slot_with_error))
+            sig3.signal.emit()
+            await asyncio.wait_for(error_called.wait(), timeout=1.0)
+            excepthook.assert_called_once()
+            assert isinstance(excepthook.call_args[0][1], ValueError)
+
+        with mock.patch.object(sys, "excepthook") as excepthook:
+            sig4 = qasync._make_signaller(qasync.QtCore)
+            sig4.signal.connect(qasync.asyncSlot()(slot_with_cancel))
+            sig4.signal.emit()
+            await asyncio.wait_for(cancel_called.wait(), timeout=1.0)
+            excepthook.assert_not_called()
+
+    loop.run_until_complete(main())
+
+
+def test_async_close(loop, application):
+    close_called = asyncio.Event()
+    close_err_called = asyncio.Event()
+    close_hang_called = asyncio.Event()
+
+    @qasync.asyncClose
+    async def close():
+        close_called.set()
+        return 33
+
+    @qasync.asyncClose
+    async def close_err():
+        close_err_called.set()
+        raise ValueError("Test")
+
+    @qasync.asyncClose
+    async def close_hang():
+        # do an actual cancel instead of directly raising, for completeness.
+        current = asyncio.current_task()
+        assert current is not None
+
+        async def killer():
+            await asyncio.sleep(0.001)
+            current.cancel()
+
+        asyncio.create_task(killer())
+        close_hang_called.set()
+        await asyncio.Event().wait()
+        assert False, "Should have been cancelled"
+
+    # need to run in async context to have a running event loop
+    async def main():
+        # close() is a synchronous top level call, need
+        # to wrap it to be able to enter event loop
+
+        # test that a regular close works
+        assert await qasync.asyncWrap(close) == 33
+        assert close_called.is_set()
+
+        # test that an exception in the async close is propagated
+        with pytest.raises(ValueError) as err:
+            await qasync.asyncWrap(close_err)
+        assert err.value.args[0] == "Test"
+        assert close_err_called.is_set()
+
+        # test that a CancelledError is not propagated
+        assert await qasync.asyncWrap(close_hang) is None
+        assert close_hang_called.is_set()
 
     loop.run_until_complete(main())
 

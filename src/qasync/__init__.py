@@ -391,6 +391,9 @@ class _QEventLoop:
             # for asyncio to recognize the already running loop
             asyncio.events._set_running_loop(self)
 
+    def get_app(self):
+        return self.__app
+
     def run_forever(self):
         """Run eventloop forever."""
 

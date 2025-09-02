@@ -124,14 +124,9 @@ class _Selector(selectors.BaseSelector):
             try:
                 notifier = notifiers.pop(key.fd)
             except KeyError:
-                pass
+                pass  # pragma: no cover
             else:
-                notifier.setEnabled(False)
-                try:
-                    notifier.activated["int"].disconnect()
-                except Exception:
-                    pass
-                notifier.deleteLater()
+                self._delete_notifier(notifier)
 
         try:
             key = self._fd_to_key.pop(self._fileobj_lookup(fileobj))
@@ -163,12 +158,7 @@ class _Selector(selectors.BaseSelector):
         for notifier in itertools.chain(
             self.__read_notifiers.values(), self.__write_notifiers.values()
         ):
-            notifier.setEnabled(False)
-            try:
-                notifier.activated["int"].disconnect()
-            except Exception:
-                pass
-            notifier.deleteLater()
+            self._delete_notifier(notifier)
         self.__read_notifiers.clear()
         self.__write_notifiers.clear()
 
@@ -190,6 +180,15 @@ class _Selector(selectors.BaseSelector):
             return self._fd_to_key[fd]
         except KeyError:
             return None
+
+    @staticmethod
+    def _delete_notifier(notifier):
+        notifier.setEnabled(False)
+        try:
+            notifier.activated["int"].disconnect()
+        except Exception:
+            pass  # pragma: no cover
+        notifier.deleteLater()
 
 
 class _SelectorEventLoop(asyncio.SelectorEventLoop):

@@ -490,7 +490,7 @@ class _QEventLoop:
         try:
             self.__call_soon_signal.disconnect()
         except Exception:
-            pass
+            pass  # pragma: no cover
         self.__call_soon_signaller.deleteLater()
 
         # Stop timers first to avoid late invocations during teardown
@@ -501,12 +501,7 @@ class _QEventLoop:
         for notifier in itertools.chain(
             self._read_notifiers.values(), self._write_notifiers.values()
         ):
-            notifier.setEnabled(False)
-            try:
-                notifier.activated["int"].disconnect()
-            except Exception:
-                pass
-            notifier.deleteLater()
+            self._delete_notifier(notifier)
 
         self._read_notifiers.clear()
         self._write_notifiers.clear()
@@ -563,9 +558,7 @@ class _QEventLoop:
             pass
         else:
             # this is necessary to avoid race condition-like issues
-            existing.setEnabled(False)
-            existing.activated["int"].disconnect()
-            existing.deleteLater()
+            self._delete_notifier(existing)
             # will get overwritten by the assignment below anyways
 
         notifier = QtCore.QSocketNotifier(
@@ -591,9 +584,7 @@ class _QEventLoop:
         except KeyError:
             return False
         else:
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
-            notifier.deleteLater()
+            self._delete_notifier(notifier)
             return True
 
     def _add_writer(self, fd, callback, *args):
@@ -605,9 +596,7 @@ class _QEventLoop:
             pass
         else:
             # this is necessary to avoid race condition-like issues
-            existing.setEnabled(False)
-            existing.activated["int"].disconnect()
-            existing.deleteLater()
+            self._delete_notifier(existing)
             # will get overwritten by the assignment below anyways
 
         notifier = QtCore.QSocketNotifier(
@@ -635,9 +624,7 @@ class _QEventLoop:
         except KeyError:
             return False
         else:
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
-            notifier.deleteLater()
+            self._delete_notifier(notifier)
             return True
 
     def __notifier_cb_wrapper(self, notifiers, notifier, fd, callback, args):
@@ -655,16 +642,14 @@ class _QEventLoop:
                 notifier.setEnabled(True)
 
     def __on_notifier_ready(self, notifiers, notifier, fd, callback, args):
-        if fd not in notifiers:
+        if fd not in notifiers:  # pragma: no cover
             self._logger.warning(
                 "Socket notifier for fd %s is ready, even though it should "
                 "be disabled, not calling %s and disabling",
                 fd,
                 callback,
             )
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
-            notifier.deleteLater()
+            self._delete_notifier(notifier)
             return
 
         # It can be necessary to disable QSocketNotifier when e.g. checking
@@ -675,6 +660,15 @@ class _QEventLoop:
         self.call_soon(
             self.__notifier_cb_wrapper, notifiers, notifier, fd, callback, args
         )
+
+    @staticmethod
+    def _delete_notifier(notifier):
+        notifier.setEnabled(False)
+        try:
+            notifier.activated["int"].disconnect()
+        except Exception:
+            pass  # pragma: no cover
+        notifier.deleteLater()
 
     # Methods for interacting with threads.
 

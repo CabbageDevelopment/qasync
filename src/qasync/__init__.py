@@ -537,6 +537,7 @@ class _QEventLoop:
             # this is necessary to avoid race condition-like issues
             existing.setEnabled(False)
             existing.activated["int"].disconnect()
+            existing.deleteLater()
             # will get overwritten by the assignment below anyways
 
         notifier = QtCore.QSocketNotifier(
@@ -564,6 +565,7 @@ class _QEventLoop:
         else:
             notifier.setEnabled(False)
             notifier.activated["int"].disconnect()
+            notifier.deleteLater()
             return True
 
     def _add_writer(self, fd, callback, *args):
@@ -577,6 +579,7 @@ class _QEventLoop:
             # this is necessary to avoid race condition-like issues
             existing.setEnabled(False)
             existing.activated["int"].disconnect()
+            existing.deleteLater()
             # will get overwritten by the assignment below anyways
 
         notifier = QtCore.QSocketNotifier(
@@ -606,6 +609,7 @@ class _QEventLoop:
         else:
             notifier.setEnabled(False)
             notifier.activated["int"].disconnect()
+            notifier.deleteLater()
             return True
 
     def __notifier_cb_wrapper(self, notifiers, notifier, fd, callback, args):
@@ -632,6 +636,7 @@ class _QEventLoop:
             )
             notifier.setEnabled(False)
             notifier.activated["int"].disconnect()
+            notifier.deleteLater()
             return
 
         # It can be necessary to disable QSocketNotifier when e.g. checking

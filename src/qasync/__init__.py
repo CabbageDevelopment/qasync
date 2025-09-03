@@ -384,7 +384,9 @@ class _QEventLoop:
             self.qtparent is not None
             and self.qtparent.thread() is not QtCore.QThread.currentThread()
         ):
-            raise RuntimeError("qt_parent must belong to the same QThread as the event loop")
+            raise RuntimeError(
+                "qt_parent must belong to the same QThread as the event loop"
+            )
         self._timer.setParent(self.qtparent)
         signaller.setParent(self.qtparent)
 
@@ -499,20 +501,20 @@ class _QEventLoop:
         # Disconnect thread-safe signaller and schedule deletion of helper QObjects
         try:
             self.__call_soon_signal.disconnect()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
         try:
             # may raise if already deleted
             self.__call_soon_signaller.deleteLater()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
 
         # Stop timers first to avoid late invocations during teardown
         self._timer.stop()
         try:
             self._timer.deleteLater()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
 
         # Disable and disconnect any remaining notifiers before closing
         for notifier in itertools.chain(
@@ -683,12 +685,12 @@ class _QEventLoop:
         notifier.setEnabled(False)
         try:
             notifier.activated["int"].disconnect()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
         try:
             notifier.deleteLater()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
 
     # Methods for interacting with threads.
 

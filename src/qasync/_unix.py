@@ -123,8 +123,8 @@ class _Selector(selectors.BaseSelector):
         def drop_notifier(notifiers):
             try:
                 notifier = notifiers.pop(key.fd)
-            except KeyError:
-                pass  # pragma: no cover
+            except KeyError:  # pragma: no cover
+                pass
             else:
                 self._delete_notifier(notifier)
 
@@ -186,12 +186,12 @@ class _Selector(selectors.BaseSelector):
         notifier.setEnabled(False)
         try:
             notifier.activated["int"].disconnect()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
         try:
             notifier.deleteLater()
-        except Exception:
-            pass  # pragma: no cover
+        except Exception:  # pragma: no cover
+            pass
 
 
 class _SelectorEventLoop(asyncio.SelectorEventLoop):
@@ -200,8 +200,8 @@ class _SelectorEventLoop(asyncio.SelectorEventLoop):
 
         try:
             qtparent = self.get_qtparent()
-        except AttributeError:
-            qtparent = None  # pragma: no cover
+        except AttributeError:  # pragma: no cover
+            qtparent = None
         self._qtselector = _Selector(self, qtparent=qtparent)
         asyncio.SelectorEventLoop.__init__(self, self._qtselector)
 

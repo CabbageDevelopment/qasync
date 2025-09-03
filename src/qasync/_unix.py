@@ -188,7 +188,10 @@ class _Selector(selectors.BaseSelector):
             notifier.activated["int"].disconnect()
         except Exception:
             pass  # pragma: no cover
-        notifier.deleteLater()
+        try:
+            notifier.deleteLater()
+        except Exception:
+            pass  # pragma: no cover
 
 
 class _SelectorEventLoop(asyncio.SelectorEventLoop):
@@ -196,10 +199,10 @@ class _SelectorEventLoop(asyncio.SelectorEventLoop):
         self._signal_safe_callbacks = []
 
         try:
-            app = self.get_app()
+            qtparent = self.get_qtparent()
         except AttributeError:
-            app = None  # pragma: no cover
-        self._qtselector = _Selector(self, qtparent=app)
+            qtparent = None  # pragma: no cover
+        self._qtselector = _Selector(self, qtparent=qtparent)
         asyncio.SelectorEventLoop.__init__(self, self._qtselector)
 
     def close(self):

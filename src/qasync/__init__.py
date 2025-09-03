@@ -354,7 +354,9 @@ class _QEventLoop:
     The set_running_loop parameter is there for backwards compatibility and does nothing.
     """
 
-    def __init__(self, app=None, set_running_loop=False, already_running=False):
+    def __init__(
+        self, app=None, set_running_loop=False, already_running=False, qtparent=None
+    ):
         self.__app = app or QApplication.instance()
         assert self.__app is not None, "No QApplication has been instantiated"
         self.__is_running = False
@@ -364,11 +366,9 @@ class _QEventLoop:
         self._read_notifiers = {}
         self._write_notifiers = {}
         self._timer = _SimpleTimer()
+        self.qtparent = qtparent or self.__app
 
         self.__call_soon_signaller = signaller = _make_signaller(QtCore, object, tuple)
-        # Parent helper QObjects to the application for safe lifetime management
-        self._timer.setParent(self.__app)
-        signaller.setParent(self.__app)
 
         self.__call_soon_signal = signaller.signal
         self.__call_soon_signal.connect(
@@ -377,6 +377,16 @@ class _QEventLoop:
 
         assert self.__app is not None
         super().__init__()
+
+        # Parent helper objects, such as timers, to this Qt parent for safe
+        # lifetime management.
+        if (
+            self.qtparent is not None
+            and self.qtparent.thread() is not QtCore.QThread.currentThread()
+        ):
+            raise RuntimeError("qt_parent must belong to the same QThread as the event loop")
+        self._timer.setParent(self.qtparent)
+        signaller.setParent(self.qtparent)
 
         # We have to set __is_running to True after calling
         # super().__init__() because of a bug in BaseEventLoop.
@@ -391,8 +401,8 @@ class _QEventLoop:
             # for asyncio to recognize the already running loop
             asyncio.events._set_running_loop(self)
 
-    def get_app(self):
-        return self.__app
+    def get_qtparent(self):
+        return self.qtparent
 
     def run_forever(self):
         """Run eventloop forever."""
@@ -491,11 +501,18 @@ class _QEventLoop:
             self.__call_soon_signal.disconnect()
         except Exception:
             pass  # pragma: no cover
-        self.__call_soon_signaller.deleteLater()
+        try:
+            # may raise if already deleted
+            self.__call_soon_signaller.deleteLater()
+        except Exception:
+            pass  # pragma: no cover
 
         # Stop timers first to avoid late invocations during teardown
         self._timer.stop()
-        self._timer.deleteLater()
+        try:
+            self._timer.deleteLater()
+        except Exception:
+            pass  # pragma: no cover
 
         # Disable and disconnect any remaining notifiers before closing
         for notifier in itertools.chain(
@@ -668,7 +685,10 @@ class _QEventLoop:
             notifier.activated["int"].disconnect()
         except Exception:
             pass  # pragma: no cover
-        notifier.deleteLater()
+        try:
+            notifier.deleteLater()
+        except Exception:
+            pass  # pragma: no cover
 
     # Methods for interacting with threads.
 

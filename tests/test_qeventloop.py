@@ -19,6 +19,34 @@ import pytest
 
 import qasync
 
+from qasync import QtCore
+import traceback, logging
+
+_orig_setParent = QtCore.QObject.setParent
+
+
+def _dbg_setParent(self, parent):
+    if parent is not None:
+        try:
+            same = parent.thread() is self.thread()
+        except Exception:
+            same = False
+        if not same:
+            logging.error(
+                "QObject.setParent across threads: obj=%r obj.thread=%r parent=%r parent.thread=%r",
+                self,
+                self.thread(),
+                parent,
+                getattr(parent, "thread", lambda: None)(),
+            )
+            traceback.print_stack()  # prints Python stack where setParent was called
+            # Optionally raise so test fails and you can inspect the stack in the debugger:
+            # raise RuntimeError("setParent called from wrong thread")
+    return _orig_setParent(self, parent)
+
+
+QtCore.QObject.setParent = _dbg_setParent
+
 
 @pytest.fixture
 def loop(request, application):
@@ -931,21 +959,33 @@ def test_run_forever_custom_exit_code(loop, application):
             application.exec_ = orig_exec
 
 
-def test_qeventloop_in_qthread():
+@pytest.mark.parametrize("qtparent", [False, True])
+def test_qeventloop_in_qthread(qtparent):
     class CoroutineExecutorThread(qasync.QtCore.QThread):
         def __init__(self, coro):
             super().__init__()
             self.coro = coro
             self.loop = None
+            self.owner = None
 
         def run(self):
-            self.loop = qasync.QEventLoop(self)
+            # provide a parent object for temporary objects that belongs
+            # to the thread
+            self.owner = QtCore.QObject()
+            parent = self.owner if qtparent else None
+            if not qtparent:
+                with pytest.raises(RuntimeError):
+                    self.loop = qasync.QEventLoop(self, qtparent=parent)
+                return
+            else:
+                self.loop = qasync.QEventLoop(self, qtparent=parent)
             asyncio.set_event_loop(self.loop)
             asyncio.run(self.coro)
 
         def join(self):
-            self.loop.stop()
-            self.loop.close()
+            if self.loop:
+                self.loop.stop()
+                self.loop.close()
             self.wait()
 
     event = threading.Event()
@@ -957,7 +997,8 @@ def test_qeventloop_in_qthread():
     thread = CoroutineExecutorThread(coro())
     thread.start()
 
-    assert event.wait(timeout=1), "Coroutine did not execute successfully"
+    if qtparent:
+        assert event.wait(timeout=1), "Coroutine did not execute successfully"
 
     thread.join()  # Ensure thread cleanup
 

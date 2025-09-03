@@ -18,34 +18,7 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import pytest
 
 import qasync
-
 from qasync import QtCore
-import traceback, logging
-
-_orig_setParent = QtCore.QObject.setParent
-
-
-def _dbg_setParent(self, parent):
-    if parent is not None:
-        try:
-            same = parent.thread() is self.thread()
-        except Exception:
-            same = False
-        if not same:
-            logging.error(
-                "QObject.setParent across threads: obj=%r obj.thread=%r parent=%r parent.thread=%r",
-                self,
-                self.thread(),
-                parent,
-                getattr(parent, "thread", lambda: None)(),
-            )
-            traceback.print_stack()  # prints Python stack where setParent was called
-            # Optionally raise so test fails and you can inspect the stack in the debugger:
-            # raise RuntimeError("setParent called from wrong thread")
-    return _orig_setParent(self, parent)
-
-
-QtCore.QObject.setParent = _dbg_setParent
 
 
 @pytest.fixture

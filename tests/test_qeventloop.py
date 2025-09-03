@@ -1013,6 +1013,24 @@ def test_run_forever_custom_exit_code(loop, application):
             application.exec_ = orig_exec
 
 
+def test_loop_non_reentrant(loop):
+    async def noop():
+        pass
+
+    async def task():
+        t = loop.create_task(noop())
+        with pytest.raises(RuntimeError):
+            loop.run_forever()
+
+        with pytest.raises(RuntimeError):
+            loop.run_until_complete(t)
+        return 43
+
+    t = loop.create_task(task())
+    loop.run_until_complete(t)
+    assert t.result() == 43
+
+
 def test_qeventloop_in_qthread():
     class CoroutineExecutorThread(qasync.QtCore.QThread):
         def __init__(self, coro):

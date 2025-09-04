@@ -417,24 +417,27 @@ class _QEventLoop:
         if self.__is_running:
             raise RuntimeError("Event loop already running")
 
-        async def wrapper():
-            try:
-                return await future
-            finally:
-                self.stop()
-
         self.__log_debug("Running %s until complete", future)
-        task = self.create_task(wrapper())
 
-        self.run_forever()
+        # future may actually be a coroutine.  This ensures it is wrapped in a Task.
+        future = asyncio.ensure_future(future, loop=self)
+
+        def stop(*args):
+            self.stop()  # noqa
+
+        future.add_done_callback(stop)
+        try:
+            self.run_forever()
+        finally:
+            future.remove_done_callback(stop)
         self.__app.eventDispatcher().processEvents(
             AllEvents
         )  # run loop one last time to process all the events
-        if not task.done():
+        if not future.done():
             raise RuntimeError("Event loop stopped before Future completed.")
 
         self.__log_debug("Future %s finished running", future)
-        return task.result()
+        return future.result()
 
     def stop(self):
         """Stop event loop."""

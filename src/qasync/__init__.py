@@ -103,6 +103,9 @@ elif QtModuleName == "PySide6":
 
 from ._common import with_logger  # noqa
 
+# strong references to running background tasks
+background_tasks = set()
+
 
 @with_logger
 class _QThreadWorker(QtCore.QThread):
@@ -845,7 +848,9 @@ def asyncSlot(*args, **kwargs):
                         )
                 else:
                     task = asyncio.create_task(_error_handler(fn, args, kwargs))
-                    return task
+                    background_tasks.add(task)
+                    task.add_done_callback(background_tasks.discard)
+                    return
 
         return wrapper
 

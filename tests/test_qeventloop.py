@@ -996,6 +996,14 @@ def test_run_until_complete_returns_future_result(loop):
     assert loop.run_until_complete(asyncio.wait_for(coro(), timeout=1)) == 42
 
 
+def test_run_until_complete_future(loop):
+    """Test that run_until_complete accepts futures"""
+
+    fut = asyncio.Future()
+    loop.call_soon(lambda: fut.set_result(42))
+    assert loop.run_until_complete(fut) == 42
+
+
 def test_run_forever_custom_exit_code(loop, application):
     if hasattr(application, "exec"):
         orig_exec = application.exec

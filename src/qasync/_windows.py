@@ -38,6 +38,9 @@ class _ProactorEventLoop(asyncio.ProactorEventLoop):
         self.__event_signal.connect(self._process_events)
         self.__event_poller = _EventPoller(self.__event_signal)
 
+    def get_proactor_event_poller(self):
+        return self.__event_poller
+
     def _process_events(self, events):
         """Process events from proactor."""
         for f, callback, transferred, key, ov in events:
@@ -210,6 +213,7 @@ class _EventPoller:
 
     def __init__(self, sig_events):
         self.sig_events = sig_events
+        self.__worker = None
 
     def start(self, proactor):
         self._logger.debug("Starting (proactor: %s)...", proactor)
@@ -218,4 +222,6 @@ class _EventPoller:
 
     def stop(self):
         self._logger.debug("Stopping worker thread...")
-        self.__worker.stop()
+        if self.__worker is not None:
+            self.__worker.stop()
+            self.__worker = None

@@ -18,6 +18,7 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import pytest
 
 import qasync
+from qasync import QtCore
 
 
 @pytest.fixture
@@ -931,21 +932,33 @@ def test_run_forever_custom_exit_code(loop, application):
             application.exec_ = orig_exec
 
 
-def test_qeventloop_in_qthread():
+@pytest.mark.parametrize("qtparent", [False, True])
+def test_qeventloop_in_qthread(qtparent):
     class CoroutineExecutorThread(qasync.QtCore.QThread):
         def __init__(self, coro):
             super().__init__()
             self.coro = coro
             self.loop = None
+            self.owner = None
 
         def run(self):
-            self.loop = qasync.QEventLoop(self)
+            # provide a parent object for temporary objects that belongs
+            # to the thread
+            self.owner = QtCore.QObject()
+            parent = self.owner if qtparent else None
+            if not qtparent:
+                with pytest.raises(RuntimeError):
+                    self.loop = qasync.QEventLoop(self, qtparent=parent)
+                return
+            else:
+                self.loop = qasync.QEventLoop(self, qtparent=parent)
             asyncio.set_event_loop(self.loop)
             asyncio.run(self.coro)
 
         def join(self):
-            self.loop.stop()
-            self.loop.close()
+            if self.loop:
+                self.loop.stop()
+                self.loop.close()
             self.wait()
 
     event = threading.Event()
@@ -957,7 +970,8 @@ def test_qeventloop_in_qthread():
     thread = CoroutineExecutorThread(coro())
     thread.start()
 
-    assert event.wait(timeout=1), "Coroutine did not execute successfully"
+    if qtparent:
+        assert event.wait(timeout=1), "Coroutine did not execute successfully"
 
     thread.join()  # Ensure thread cleanup
 

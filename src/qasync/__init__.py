@@ -354,7 +354,9 @@ class _QEventLoop:
     The set_running_loop parameter is there for backwards compatibility and does nothing.
     """
 
-    def __init__(self, app=None, set_running_loop=False, already_running=False):
+    def __init__(
+        self, app=None, set_running_loop=False, already_running=False, qtparent=None
+    ):
         self.__app = app or QApplication.instance()
         assert self.__app is not None, "No QApplication has been instantiated"
         self.__is_running = False
@@ -364,8 +366,10 @@ class _QEventLoop:
         self._read_notifiers = {}
         self._write_notifiers = {}
         self._timer = _SimpleTimer()
+        self.qtparent = qtparent or self.__app
 
         self.__call_soon_signaller = signaller = _make_signaller(QtCore, object, tuple)
+
         self.__call_soon_signal = signaller.signal
         self.__call_soon_signal.connect(
             lambda callback, args: self.call_soon(callback, *args)
@@ -373,6 +377,18 @@ class _QEventLoop:
 
         assert self.__app is not None
         super().__init__()
+
+        # Parent helper objects, such as timers, to this Qt parent for safe
+        # lifetime management.
+        if (
+            self.qtparent is not None
+            and self.qtparent.thread() is not QtCore.QThread.currentThread()
+        ):
+            raise RuntimeError(
+                "qt_parent must belong to the same QThread as the event loop"
+            )
+        self._timer.setParent(self.qtparent)
+        signaller.setParent(self.qtparent)
 
         # We have to set __is_running to True after calling
         # super().__init__() because of a bug in BaseEventLoop.
@@ -386,6 +402,9 @@ class _QEventLoop:
 
             # for asyncio to recognize the already running loop
             asyncio.events._set_running_loop(self)
+
+    def get_qtparent(self):
+        return self.qtparent
 
     def run_forever(self):
         """Run eventloop forever."""
@@ -463,26 +482,53 @@ class _QEventLoop:
         if self.is_closed():
             return
 
+        # the following code places try/catch around possibly failing
+        # operations for safety and to guard against implementation
+        # difference in the QT bindings.
+
         self.__log_debug("Closing event loop...")
+        # Catch exceptions for safety between bindings.
+        try:
+            poller = self.get_proactor_event_poller()
+        except AttributeError:
+            pass
+        else:
+            poller.stop()
+
         if self.__default_executor is not None:
             self.__default_executor.shutdown()
 
-        if self.__call_soon_signal:
+        # Disconnect thread-safe signaller and schedule deletion of helper QObjects
+        try:
             self.__call_soon_signal.disconnect()
+        except Exception:  # pragma: no cover
+            pass
+        try:
+            # may raise if already deleted
+            self.__call_soon_signaller.deleteLater()
+        except Exception:  # pragma: no cover
+            pass
 
-        super().close()
-
+        # Stop timers first to avoid late invocations during teardown
         self._timer.stop()
-        self.__app = None
+        try:
+            self._timer.deleteLater()
+        except Exception:  # pragma: no cover
+            pass
 
+        # Disable and disconnect any remaining notifiers before closing
         for notifier in itertools.chain(
             self._read_notifiers.values(), self._write_notifiers.values()
         ):
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
+            self._delete_notifier(notifier)
 
-        self._read_notifiers = None
-        self._write_notifiers = None
+        self._read_notifiers.clear()
+        self._write_notifiers.clear()
+
+        super().close()
+
+        # Finally, clear app reference
+        self.__app = None
 
     def call_later(self, delay, callback, *args, context=None):
         """Register callback to be invoked after a certain delay."""
@@ -531,15 +577,16 @@ class _QEventLoop:
             pass
         else:
             # this is necessary to avoid race condition-like issues
-            existing.setEnabled(False)
-            existing.activated["int"].disconnect()
+            self._delete_notifier(existing)
             # will get overwritten by the assignment below anyways
 
-        notifier = QtCore.QSocketNotifier(_fileno(fd), QtCore.QSocketNotifier.Type.Read)
+        notifier = QtCore.QSocketNotifier(
+            _fileno(fd), QtCore.QSocketNotifier.Type.Read, self.__app
+        )
         notifier.setEnabled(True)
         self.__log_debug("Adding reader callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
-            lambda: self.__on_notifier_ready(
+            lambda *_: self.__on_notifier_ready(
                 self._read_notifiers, notifier, fd, callback, args
             )  # noqa: C812
         )
@@ -556,8 +603,7 @@ class _QEventLoop:
         except KeyError:
             return False
         else:
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
+            self._delete_notifier(notifier)
             return True
 
     def _add_writer(self, fd, callback, *args):
@@ -569,18 +615,18 @@ class _QEventLoop:
             pass
         else:
             # this is necessary to avoid race condition-like issues
-            existing.setEnabled(False)
-            existing.activated["int"].disconnect()
+            self._delete_notifier(existing)
             # will get overwritten by the assignment below anyways
 
         notifier = QtCore.QSocketNotifier(
             _fileno(fd),
             QtCore.QSocketNotifier.Type.Write,
+            self.__app,
         )
         notifier.setEnabled(True)
         self.__log_debug("Adding writer callback for file descriptor %s", fd)
         notifier.activated["int"].connect(
-            lambda: self.__on_notifier_ready(
+            lambda *_: self.__on_notifier_ready(
                 self._write_notifiers, notifier, fd, callback, args
             )  # noqa: C812
         )
@@ -597,8 +643,7 @@ class _QEventLoop:
         except KeyError:
             return False
         else:
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
+            self._delete_notifier(notifier)
             return True
 
     def __notifier_cb_wrapper(self, notifiers, notifier, fd, callback, args):
@@ -616,15 +661,14 @@ class _QEventLoop:
                 notifier.setEnabled(True)
 
     def __on_notifier_ready(self, notifiers, notifier, fd, callback, args):
-        if fd not in notifiers:
+        if fd not in notifiers:  # pragma: no cover
             self._logger.warning(
                 "Socket notifier for fd %s is ready, even though it should "
                 "be disabled, not calling %s and disabling",
                 fd,
                 callback,
             )
-            notifier.setEnabled(False)
-            notifier.activated["int"].disconnect()
+            self._delete_notifier(notifier)
             return
 
         # It can be necessary to disable QSocketNotifier when e.g. checking
@@ -635,6 +679,18 @@ class _QEventLoop:
         self.call_soon(
             self.__notifier_cb_wrapper, notifiers, notifier, fd, callback, args
         )
+
+    @staticmethod
+    def _delete_notifier(notifier):
+        notifier.setEnabled(False)
+        try:
+            notifier.activated["int"].disconnect()
+        except Exception:  # pragma: no cover
+            pass
+        try:
+            notifier.deleteLater()
+        except Exception:  # pragma: no cover
+            pass
 
     # Methods for interacting with threads.
 

@@ -10,12 +10,16 @@ BSD License
 
 import asyncio
 import collections
+import itertools
 import selectors
 
 from . import QtCore, _fileno, with_logger
 
 EVENT_READ = 1 << 0
 EVENT_WRITE = 1 << 1
+
+# Qt5/Qt6 compatibility
+NotifierEnum = getattr(QtCore.QSocketNotifier, "Type", QtCore.QSocketNotifier)
 
 
 class _SelectorMapping(collections.abc.Mapping):
@@ -40,7 +44,7 @@ class _SelectorMapping(collections.abc.Mapping):
 
 @with_logger
 class _Selector(selectors.BaseSelector):
-    def __init__(self, parent):
+    def __init__(self, parent, qtparent=None):
         # this maps file descriptors to keys
         self._fd_to_key = {}
         # read-only mapping returned by get_map()
@@ -48,6 +52,7 @@ class _Selector(selectors.BaseSelector):
         self.__read_notifiers = {}
         self.__write_notifiers = {}
         self.__parent = parent
+        self.__qtparent = qtparent
 
     def select(self, *args, **kwargs):
         """Implement abstract method even though we don't need it."""
@@ -86,11 +91,17 @@ class _Selector(selectors.BaseSelector):
         self._fd_to_key[key.fd] = key
 
         if events & EVENT_READ:
-            notifier = QtCore.QSocketNotifier(key.fd, QtCore.QSocketNotifier.Read)
+            notifier = QtCore.QSocketNotifier(
+                key.fd, NotifierEnum.Read, self.__qtparent
+            )
+            notifier.setEnabled(True)
             notifier.activated["int"].connect(self.__on_read_activated)
             self.__read_notifiers[key.fd] = notifier
         if events & EVENT_WRITE:
-            notifier = QtCore.QSocketNotifier(key.fd, QtCore.QSocketNotifier.Write)
+            notifier = QtCore.QSocketNotifier(
+                key.fd, NotifierEnum.Write, self.__qtparent
+            )
+            notifier.setEnabled(True)
             notifier.activated["int"].connect(self.__on_write_activated)
             self.__write_notifiers[key.fd] = notifier
 
@@ -112,10 +123,10 @@ class _Selector(selectors.BaseSelector):
         def drop_notifier(notifiers):
             try:
                 notifier = notifiers.pop(key.fd)
-            except KeyError:
+            except KeyError:  # pragma: no cover
                 pass
             else:
-                notifier.activated["int"].disconnect()
+                self._delete_notifier(notifier)
 
         try:
             key = self._fd_to_key.pop(self._fileobj_lookup(fileobj))
@@ -144,6 +155,10 @@ class _Selector(selectors.BaseSelector):
     def close(self):
         self._logger.debug("Closing")
         self._fd_to_key.clear()
+        for notifier in itertools.chain(
+            self.__read_notifiers.values(), self.__write_notifiers.values()
+        ):
+            self._delete_notifier(notifier)
         self.__read_notifiers.clear()
         self.__write_notifiers.clear()
 
@@ -166,13 +181,33 @@ class _Selector(selectors.BaseSelector):
         except KeyError:
             return None
 
+    @staticmethod
+    def _delete_notifier(notifier):
+        notifier.setEnabled(False)
+        try:
+            notifier.activated["int"].disconnect()
+        except Exception:  # pragma: no cover
+            pass
+        try:
+            notifier.deleteLater()
+        except Exception:  # pragma: no cover
+            pass
+
 
 class _SelectorEventLoop(asyncio.SelectorEventLoop):
     def __init__(self):
         self._signal_safe_callbacks = []
 
-        selector = _Selector(self)
-        asyncio.SelectorEventLoop.__init__(self, selector)
+        try:
+            qtparent = self.get_qtparent()
+        except AttributeError:  # pragma: no cover
+            qtparent = None
+        self._qtselector = _Selector(self, qtparent=qtparent)
+        asyncio.SelectorEventLoop.__init__(self, self._qtselector)
+
+    def close(self):
+        self._qtselector.close()
+        super().close()
 
     def _before_run_forever(self):
         pass

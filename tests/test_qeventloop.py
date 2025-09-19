@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from unittest import mock
 
 import pytest
 
@@ -595,8 +596,8 @@ def test_regression_bug13(loop, sock_pair):
 
         loop._add_reader(c_sock.fileno(), cb1)
 
-    _client_task = asyncio.ensure_future(client_coro())
-    _server_task = asyncio.ensure_future(server_coro())
+    _client_task = loop.create_task(client_coro())
+    _server_task = loop.create_task(server_coro())
 
     both_done = asyncio.gather(client_done, server_done)
     loop.run_until_complete(asyncio.wait_for(both_done, timeout=1.0))
@@ -640,8 +641,8 @@ def test_add_reader_replace(loop, sock_pair):
         loop._remove_reader(c_sock.fileno())
         assert (await loop.sock_recv(c_sock, 3)) == b"foo"
 
-    client_done = asyncio.ensure_future(client_coro())
-    server_done = asyncio.ensure_future(server_coro())
+    client_done = loop.create_task(client_coro())
+    server_done = loop.create_task(server_coro())
 
     both_done = asyncio.wait(
         [server_done, client_done], return_when=asyncio.FIRST_EXCEPTION
@@ -758,7 +759,7 @@ def test_exception_handler(loop):
         handler_called = True
 
     loop.set_exception_handler(exct_handler)
-    asyncio.ensure_future(future_except())
+    loop.create_task(future_except())
     loop.run_forever()
 
     assert coro_run
@@ -775,7 +776,11 @@ def test_exception_handler_simple(loop):
     loop.set_exception_handler(exct_handler)
     fut1 = asyncio.Future()
     fut1.set_exception(ExceptionTester())
-    asyncio.ensure_future(fut1)
+
+    async def coro(future):
+        await future
+
+    loop.create_task(coro(fut1))
     del fut1
     loop.call_later(0.1, loop.stop)
     loop.run_forever()
@@ -798,6 +803,8 @@ def test_async_slot(loop):
     no_args_called = asyncio.Event()
     with_args_called = asyncio.Event()
     trailing_args_called = asyncio.Event()
+    error_called = asyncio.Event()
+    cancel_called = asyncio.Event()
 
     async def slot_no_args():
         no_args_called.set()
@@ -811,6 +818,14 @@ def test_async_slot(loop):
         trailing_args_called.set()
 
     async def slot_signature_mismatch(_: bool): ...
+
+    async def slot_with_error():
+        error_called.set()
+        raise ValueError("Test")
+
+    async def slot_with_cancel():
+        cancel_called.set()
+        raise asyncio.CancelledError()
 
     async def main():
         # passing kwargs to the underlying Slot such as name, arguments, return
@@ -835,6 +850,73 @@ def test_async_slot(loop):
             no_args_called.wait(), with_args_called.wait(), trailing_args_called.wait()
         )
         await asyncio.wait_for(all_done, timeout=1.0)
+
+        with mock.patch.object(sys, "excepthook") as excepthook:
+            sig3 = qasync._make_signaller(qasync.QtCore)
+            sig3.signal.connect(qasync.asyncSlot()(slot_with_error))
+            sig3.signal.emit()
+            await asyncio.wait_for(error_called.wait(), timeout=1.0)
+            excepthook.assert_called_once()
+            assert isinstance(excepthook.call_args[0][1], ValueError)
+
+        with mock.patch.object(sys, "excepthook") as excepthook:
+            sig4 = qasync._make_signaller(qasync.QtCore)
+            sig4.signal.connect(qasync.asyncSlot()(slot_with_cancel))
+            sig4.signal.emit()
+            await asyncio.wait_for(cancel_called.wait(), timeout=1.0)
+            excepthook.assert_not_called()
+
+    loop.run_until_complete(main())
+
+
+def test_async_close(loop, application):
+    close_called = asyncio.Event()
+    close_err_called = asyncio.Event()
+    close_hang_called = asyncio.Event()
+
+    @qasync.asyncClose
+    async def close():
+        close_called.set()
+        return 33
+
+    @qasync.asyncClose
+    async def close_err():
+        close_err_called.set()
+        raise ValueError("Test")
+
+    @qasync.asyncClose
+    async def close_hang():
+        # do an actual cancel instead of directly raising, for completeness.
+        current = asyncio.current_task()
+        assert current is not None
+
+        async def killer():
+            await asyncio.sleep(0.001)
+            current.cancel()
+
+        asyncio.create_task(killer())
+        close_hang_called.set()
+        await asyncio.Event().wait()
+        assert False, "Should have been cancelled"
+
+    # need to run in async context to have a running event loop
+    async def main():
+        # close() is a synchronous top level call, need
+        # to wrap it to be able to enter event loop
+
+        # test that a regular close works
+        assert await qasync.asyncWrap(close) == 33
+        assert close_called.is_set()
+
+        # test that an exception in the async close is propagated
+        with pytest.raises(ValueError) as err:
+            await qasync.asyncWrap(close_err)
+        assert err.value.args[0] == "Test"
+        assert close_err_called.is_set()
+
+        # test that a CancelledError is not propagated
+        assert await qasync.asyncWrap(close_hang) is None
+        assert close_hang_called.is_set()
 
     loop.run_until_complete(main())
 
@@ -915,6 +997,14 @@ def test_run_until_complete_returns_future_result(loop):
     assert loop.run_until_complete(asyncio.wait_for(coro(), timeout=1)) == 42
 
 
+def test_run_until_complete_future(loop):
+    """Test that run_until_complete accepts futures"""
+
+    fut = asyncio.Future()
+    loop.call_soon(lambda: fut.set_result(42))
+    assert loop.run_until_complete(fut) == 42
+
+
 def test_run_forever_custom_exit_code(loop, application):
     if hasattr(application, "exec"):
         orig_exec = application.exec
@@ -930,6 +1020,24 @@ def test_run_forever_custom_exit_code(loop, application):
             assert loop.run_forever() == 42
         finally:
             application.exec_ = orig_exec
+
+
+def test_loop_non_reentrant(loop):
+    async def noop():
+        pass
+
+    async def task():
+        t = loop.create_task(noop())
+        with pytest.raises(RuntimeError):
+            loop.run_forever()
+
+        with pytest.raises(RuntimeError):
+            loop.run_until_complete(t)
+        return 43
+
+    t = loop.create_task(task())
+    loop.run_until_complete(t)
+    assert t.result() == 43
 
 
 @pytest.mark.parametrize("qtparent", [False, True])

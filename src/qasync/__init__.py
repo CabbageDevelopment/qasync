@@ -81,6 +81,9 @@ else:
 
 from ._common import with_logger  # noqa
 
+# strong references to running background tasks
+background_tasks = set()
+
 
 @with_logger
 class _QThreadWorker(QtCore.QThread):
@@ -415,6 +418,8 @@ class _QEventLoop:
             raise RuntimeError("Event loop already running")
 
         self.__log_debug("Running %s until complete", future)
+
+        # future may actually be a coroutine.  This ensures it is wrapped in a Task.
         future = asyncio.ensure_future(future, loop=self)
 
         def stop(*args):
@@ -834,9 +839,15 @@ def asyncClose(fn):
 
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
-        f = asyncio.ensure_future(fn(*args, **kwargs))
-        while not f.done():
-            QApplication.instance().processEvents()
+        loop = asyncio.get_running_loop()
+        assert isinstance(loop, QEventLoop)
+        task = loop.create_task(fn(*args, **kwargs))
+        while not task.done():
+            QApplication.processEvents(AllEvents)
+        try:
+            return task.result()
+        except asyncio.CancelledError:
+            pass
 
     return wrapper
 
@@ -844,13 +855,11 @@ def asyncClose(fn):
 def asyncSlot(*args, **kwargs):
     """Make a Qt async slot run on asyncio loop."""
 
-    def _error_handler(task):
+    async def _error_handler(fn, args, kwargs):
         try:
-            task.result()
+            await fn(*args, **kwargs)
         except Exception:
             sys.excepthook(*sys.exc_info())
-        except asyncio.CancelledError:
-            pass
 
     def outer_decorator(fn):
         @Slot(*args, **kwargs)
@@ -873,9 +882,10 @@ def asyncSlot(*args, **kwargs):
                             "asyncSlot was not callable from Signal. Potential signature mismatch."
                         )
                 else:
-                    task = asyncio.ensure_future(fn(*args, **kwargs))
-                    task.add_done_callback(_error_handler)
-                    return task
+                    task = asyncio.create_task(_error_handler(fn, args, kwargs))
+                    background_tasks.add(task)
+                    task.add_done_callback(background_tasks.discard)
+                    return
 
         return wrapper
 

@@ -21,43 +21,58 @@ If you need some CPU-intensive tasks to be executed in parallel, `qasync` also g
 import asyncio
 import sys
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtGui import QCloseEvent
+from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
-from qasync import QApplication, QEventLoop
+import qasync
+from qasync import QEventLoop, asyncClose, asyncSlot
 
 
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setLayout(QVBoxLayout())
-        self.lbl_status = QLabel("Idle", self)
-        self.layout().addWidget(self.lbl_status)
-
-    @asyncClose
-    async def closeEvent(self, event):
-        pass
+        layout = QVBoxLayout()
+        self.button = QPushButton("Load", self)
+        self.button.clicked.connect(self.onButtonClicked)
+        layout.addWidget(self.button)
+        self.setLayout(layout)
 
     @asyncSlot()
-    async def onMyEvent(self):
-        pass
+    async def onButtonClicked(self):
+        """
+        Use async code in a slot by decorating it with @asyncSlot.
+        """
+        self.button.setText("Loading...")
+        await asyncio.sleep(1)
+        self.button.setText("Load")
+
+    @asyncClose
+    async def closeEvent(self, event: QCloseEvent):
+        """
+        Use async code in a closeEvent by decorating it with @asyncClose.
+        """
+        self.button.setText("Closing...")
+        await asyncio.sleep(1)
+
+
+async def main(app):
+    app_close_event = asyncio.Event()
+    app.aboutToQuit.connect(app_close_event.set)
+    main_window = MainWindow()
+    main_window.show()
+    await app_close_event.wait()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
-    app_close_event = asyncio.Event()
-    app.aboutToQuit.connect(app_close_event.set)
-
-    main_window = MainWindow()
-    main_window.show()
-
-    # for 3.11 or older use qasync.run instead of asyncio.run
-    # qasync.run(app_close_event.wait())
-    asyncio.run(app_close_event.wait(), loop_factory=QEventLoop)
+    # for python 3.11 or newer
+    asyncio.run(main(app), loop_factory=QEventLoop)
+    # for python 3.10 or older
+    # qasync.run(main(app))
 ```
 
-More detailed examples can be found [here](https://github.com/CabbageDevelopment/qasync/tree/master/examples).
+More detailed examples can be found in the [examples](./examples/) directory.
 
 ### The Future of `qasync`
 
@@ -76,9 +91,15 @@ If you need Python 3.6 or 3.7 support, use the [v0.25.0](https://github.com/Cabb
 
 ## Installation
 
-To install `qasync`, use `pip`:
+To install using `uv`:
 
+```bash
+uv add qasync
 ```
+
+To install using `pip`:
+
+```bash
 pip install qasync
 ```
 

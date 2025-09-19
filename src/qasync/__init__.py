@@ -22,84 +22,62 @@ import sys
 import time
 from concurrent.futures import Future
 from queue import Queue
+from typing import TYPE_CHECKING, Literal, Tuple, cast, get_args
 
 logger = logging.getLogger(__name__)
 
-QtModule = None
+# runtime preference order is the same as this literal
+QtFlavor = Literal["PyQt6", "PyQt5", "PySide6", "PySide2"]
+QT_ALL = cast(Tuple[QtFlavor, ...], get_args(QtFlavor))
 
-# If QT_API env variable is given, use that or fail trying
-qtapi_env = os.getenv("QT_API", "").strip().lower()
-if qtapi_env:
-    env_to_mod_map = {
-        "pyqt5": "PyQt5",
-        "pyqt6": "PyQt6",
-        "pyqt": "PyQt6",
-        "pyside6": "PySide6",
-        "pyside2": "PySide2",
-        "pyside": "PySide6",
-    }
-    if qtapi_env in env_to_mod_map:
-        QtModuleName = env_to_mod_map[qtapi_env]
-    else:
-        raise ImportError(
-            "QT_API environment variable set ({}) but not one of [{}].".format(
-                qtapi_env, ", ".join(env_to_mod_map.keys())
-            )
-        )
 
-    logger.info("Forcing use of {} as Qt Implementation".format(QtModuleName))
-    QtModule = importlib.import_module(QtModuleName)
-
-# If a Qt lib is already imported, use that
-if not QtModule:
-    for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
-        if QtModuleName in sys.modules:
-            QtModule = sys.modules[QtModuleName]
-            break
-
-# Try importing qt libs
-if not QtModule:
-    for QtModuleName in ("PyQt5", "PyQt6", "PySide2", "PySide6"):
+def _get_qt_flavor() -> QtFlavor:
+    env = os.getenv("QT_API", "").strip().lower()
+    # prioritize env var
+    if env:
+        lookup = {name.lower(): name for name in QT_ALL}
         try:
-            QtModule = importlib.import_module(QtModuleName)
+            name = lookup[env]
+        except KeyError as err:
+            raise ImportError(
+                f"QT_API={env!r} is not one of {', '.join(QT_ALL)}"
+            ) from err
+        logger.info("Forcing use of %s as Qt implementation", name)
+        return cast(QtFlavor, name)
+    # if already imported, use it
+    for name in QT_ALL:
+        if name in sys.modules:
+            return cast(QtFlavor, name)
+    # use the first available on system
+    for name in QT_ALL:
+        try:
+            importlib.import_module(name)
+            return cast(QtFlavor, name)
         except ImportError:
             continue
-        else:
-            break
-
-if not QtModule:
     raise ImportError("No Qt implementations found")
 
-QtCore = importlib.import_module(QtModuleName + ".QtCore", package=QtModuleName)
-QtGui = importlib.import_module(QtModuleName + ".QtGui", package=QtModuleName)
 
-if QtModuleName == "PyQt5":
-    from PyQt5 import QtWidgets
-    from PyQt5.QtCore import pyqtSlot as Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
-
-elif QtModuleName == "PyQt6":
-    from PyQt6 import QtWidgets
-    from PyQt6.QtCore import pyqtSlot as Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
-
-elif QtModuleName == "PySide2":
-    from PySide2 import QtWidgets
-    from PySide2.QtCore import Slot
-
-    QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
-
-elif QtModuleName == "PySide6":
-    from PySide6 import QtWidgets
+if TYPE_CHECKING:
+    from PySide6 import QtCore, QtWidgets
     from PySide6.QtCore import Slot
 
     QApplication = QtWidgets.QApplication
-    AllEvents = QtCore.QEventLoop.ProcessEventsFlags(0x00)
+    AllEvents = QtCore.QEventLoop.ProcessEventsFlag(0x00)
+else:
+    qt_flavor = _get_qt_flavor()
+    QtCore = importlib.import_module(f"{qt_flavor}.QtCore")
+    QtWidgets = importlib.import_module(f"{qt_flavor}.QtWidgets")
+    QApplication = QtWidgets.QApplication
+
+    # PyQt uses pyqtSlot, PySide uses Slot
+    Slot = getattr(QtCore, "pyqtSlot", None) or getattr(QtCore, "Slot", None)
+
+    # PyQt6 uses ProcessEventsFlags, others use ProcessEventsFlag
+    Flags = getattr(QtCore.QEventLoop, "ProcessEventsFlags", None) or getattr(
+        QtCore.QEventLoop, "ProcessEventsFlag"
+    )
+    AllEvents = Flags(0x00)
 
 from ._common import with_logger  # noqa
 
@@ -828,16 +806,17 @@ class _QEventLoop:
             sys.stderr.write("{!r}, {!r}\n".format(args, kwds))
 
 
-from ._unix import _SelectorEventLoop  # noqa
+if sys.platform == "win32":
+    from ._windows import _ProactorEventLoop  # noqa: F401
 
-QSelectorEventLoop = type("QSelectorEventLoop", (_QEventLoop, _SelectorEventLoop), {})
+    class QIOCPEventLoop(_QEventLoop, _ProactorEventLoop): ...
 
-if os.name == "nt":
-    from ._windows import _ProactorEventLoop
-
-    QIOCPEventLoop = type("QIOCPEventLoop", (_QEventLoop, _ProactorEventLoop), {})
     QEventLoop = QIOCPEventLoop
 else:
+    from ._unix import _SelectorEventLoop  # noqa: F401
+
+    class QSelectorEventLoop(_QEventLoop, _SelectorEventLoop): ...
+
     QEventLoop = QSelectorEventLoop
 
 

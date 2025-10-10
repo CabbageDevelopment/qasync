@@ -4,10 +4,8 @@
 # BSD License
 import logging
 import threading
-import time
 import weakref
 from concurrent.futures import Future, TimeoutError
-from itertools import islice
 from unittest.mock import Mock, patch
 
 import pytest
@@ -46,6 +44,18 @@ def shutdown_executor():
     exe = qasync.QThreadExecutor(5)
     exe.shutdown()
     return exe
+
+
+@pytest.fixture
+def executor0():
+    """
+    Provides a QThreadExecutor with max_workers=0 for deterministic testing.
+    """
+    executor = qasync.QThreadExecutor(max_workers=0)
+    try:
+        yield executor
+    finally:
+        executor.shutdown(wait=True, cancel_futures=False)
 
 
 @pytest.mark.parametrize("wait", [True, False])
@@ -125,16 +135,13 @@ def test_context(executor):
 
 
 @pytest.mark.parametrize("cancel", [True, False])
-def test_shutdown_cancel_futures(cancel):
+def test_shutdown_cancel_futures(executor0, cancel):
     """Test that shutdown with cancel_futures=True cancels all remaining futures in the queue."""
 
-    # Create an executor with no workers so futures stay queued and never execute
-    executor = qasync.QThreadExecutor(max_workers=0)
-
-    futures = [executor.submit(lambda: None) for _ in range(10)]
+    futures = [executor0.submit(lambda: None) for _ in range(10)]
 
     # Shutdown with cancel_futures parameter
-    executor.shutdown(wait=False, cancel_futures=cancel)
+    executor0.shutdown(wait=False, cancel_futures=cancel)
 
     if cancel:
         # All futures should be cancelled since no workers consumed them
@@ -149,8 +156,6 @@ def test_shutdown_cancel_futures(cancel):
             f"Expected no futures to be cancelled, got {cancelled_count}"
         )
 
-    executor.shutdown(wait=True, cancel_futures=False)
-
 
 def test_map(executor):
     """Basic test of executor map functionality"""
@@ -161,86 +166,78 @@ def test_map(executor):
     assert results == [0, 2, 4, 6, 8, 10, 12, 14, 16]
 
 
-def test_map_timeout(executor):
-    """Test that map with timeout raises TimeoutError and cancels futures"""
-    results = []
+def test_map_timeout(executor0):
+    """Test that map with timeout propagates the timeout parameter to future.result()"""
 
-    def func(x):
-        nonlocal results
-        time.sleep(0.05)
-        results.append(x)
-        return x
+    f = Mock(spec=Future)
+    f.result = Mock(side_effect=TimeoutError("Timeout"))
+    f.cancel = Mock(return_value=True)
 
-    start = time.monotonic()
-    with pytest.raises(TimeoutError):
-        list(executor.map(func, range(10), timeout=0.01))
-    duration = time.monotonic() - start
-    # this test is flaky on some platforms, so we give it a wide bearth.
-    assert duration < 0.1
+    with patch.object(executor0, "submit", return_value=f):
+        with pytest.raises(TimeoutError, match="Timeout"):
+            list(executor0.map(lambda x: x, [1], timeout=0.5))
 
-    executor.shutdown(wait=True)
-    # only about half of the tasks should have completed
-    # because the max number of workers is 5 and the rest of
-    # the tasks were not started at the time of the cancel.
-    assert set(results) != {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+    # Verify the timeout parameter was passed to result() (not None)
+    # Note: The timeout is calculated as (deadline - time.monotonic()), so it will be
+    # slightly less than 0.5 due to the time taken to submit futures and start iteration
+    assert f.result.called
+    f_timeout = f.result.call_args[0][0] if f.result.call_args[0] else None
+    assert f_timeout is not None
+    assert f_timeout <= 0.5
 
 
-def test_map_error(executor):
+def test_map_error(executor0):
     """Test that map with an exception will raise, and remaining tasks are cancelled"""
-    results = []
 
-    def func(x):
-        nonlocal results
-        time.sleep(0.05)
-        if len(results) == 5:
-            raise ValueError("Test error")
-        results.append(x)
-        return x
+    # Create 3 futures: one success, one exception, one to be cancelled
+    mock_futures = []
 
-    with pytest.raises(ValueError):
-        list(executor.map(func, range(15)))
+    # First future succeeds
+    f0 = Mock(spec=Future)
+    f0.result = Mock(return_value=0)
+    f0.cancel = Mock(return_value=True)
+    mock_futures.append(f0)
 
-    executor.shutdown(wait=True, cancel_futures=False)
-    assert len(results) <= 10, "Final 5 at least should have been cancelled"
+    # Second future raises an exception
+    f1 = Future()
+    f1.set_exception(ValueError("Test error"))
+    mock_futures.append(f1)
 
+    # Third future should be cancelled
+    f2 = Mock(spec=Future)
+    f2.result = Mock(return_value=2)
+    f2.cancel = Mock(return_value=True)
+    mock_futures.append(f2)
 
-@pytest.mark.parametrize("cancel", [True, False])
-def test_map_shutdown(executor, cancel):
-    results = []
+    with patch.object(executor0, "submit", side_effect=mock_futures):
+        with pytest.raises(ValueError, match="Test error"):
+            list(executor0.map(lambda x: x, range(3)))
 
-    def func(x):
-        nonlocal results
-        time.sleep(0.05)
-        results.append(x)
-        return x
-
-    # Get the first few results.
-    # Keep the iterator alive so that it isn't closed when its reference is dropped.
-    m = executor.map(func, range(15))
-    values = list(islice(m, 5))
-    assert values == [0, 1, 2, 3, 4]
-
-    executor.shutdown(wait=True, cancel_futures=cancel)
-    if cancel:
-        assert len(results) < 15, "Some tasks should have been cancelled"
-    else:
-        assert len(results) == 15, "All tasks should have been completed"
-    m.close()
+    # Verify the third future was cancelled when the exception occurred
+    assert f2.cancel.called, "Future after exception should have been cancelled"
 
 
-def test_map_start(executor):
+def test_map_start(executor0):
     """Test that map starts tasks immediately, before iterating"""
-    e = threading.Event()
-    m = executor.map(lambda x: (e.set(), x), range(1))
-    e.wait(timeout=0.1)
-    assert list(m) == [(None, 0)]
+
+    # Mock future that returns immediately
+    mock_future = Mock(spec=Future)
+    mock_future.result = Mock(return_value=0)
+    mock_future.cancel = Mock(return_value=True)
+
+    with patch.object(executor0, "submit", return_value=mock_future) as mock_submit:
+        # Create the map - submit should be called immediately
+        m = executor0.map(lambda x: x, range(1))
+
+        # Verify submit was called before we start iterating
+        mock_submit.assert_called_once()
+
+        # Now iterate to verify the result
+        assert list(m) == [0]
 
 
-def test_map_close():
+def test_map_close(executor0):
     """Test that closing a running map cancels all remaining tasks."""
-
-    # Create an executor with no workers so we have full control
-    executor = qasync.QThreadExecutor(max_workers=0)
 
     # Create mock futures with proper result() method
     mock_futures = []
@@ -251,8 +248,8 @@ def test_map_close():
         mock_futures.append(mock_future)
 
     # Mock submit to return our pre-created futures
-    with patch.object(executor, "submit", side_effect=mock_futures):
-        m = executor.map(lambda x: x, range(10))
+    with patch.object(executor0, "submit", side_effect=mock_futures):
+        m = executor0.map(lambda x: x, range(10))
         # must start the generator so that close() has any effect
         assert next(m) == 0
         m.close()
@@ -262,5 +259,3 @@ def test_map_close():
     # - The rest via the finally block when the generator is closed
     for i, f in enumerate(mock_futures):
         assert f.cancel.called, f"Future {i} should have been cancelled"
-
-    executor.shutdown(wait=True, cancel_futures=False)

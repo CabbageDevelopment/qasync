@@ -6,8 +6,9 @@ import logging
 import threading
 import time
 import weakref
-from concurrent.futures import CancelledError, TimeoutError
+from concurrent.futures import Future, TimeoutError
 from itertools import islice
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -124,28 +125,31 @@ def test_context(executor):
 
 
 @pytest.mark.parametrize("cancel", [True, False])
-def test_shutdown_cancel_futures(executor, cancel):
+def test_shutdown_cancel_futures(cancel):
     """Test that shutdown with cancel_futures=True cancels all remaining futures in the queue."""
 
-    def task():
-        time.sleep(0.01)
+    # Create an executor with no workers so futures stay queued and never execute
+    executor = qasync.QThreadExecutor(max_workers=0)
 
-    # Submit ten tasks to the executor
-    futures = [executor.submit(task) for _ in range(10)]
-    # shut it down
-    executor.shutdown(cancel_futures=cancel)
+    futures = [executor.submit(lambda: None) for _ in range(10)]
 
-    cancels = 0
-    for future in futures:
-        try:
-            future.result(timeout=0.01)
-        except CancelledError:
-            cancels += 1
+    # Shutdown with cancel_futures parameter
+    executor.shutdown(wait=False, cancel_futures=cancel)
 
     if cancel:
-        assert cancels > 0
+        # All futures should be cancelled since no workers consumed them
+        cancelled_count = sum(1 for f in futures if f.cancelled())
+        assert cancelled_count == 10, (
+            f"Expected all 10 futures to be cancelled, got {cancelled_count}"
+        )
     else:
-        assert cancels == 0
+        # No futures should be cancelled, they should still be pending
+        cancelled_count = sum(1 for f in futures if f.cancelled())
+        assert cancelled_count == 0, (
+            f"Expected no futures to be cancelled, got {cancelled_count}"
+        )
+
+    executor.shutdown(wait=True, cancel_futures=False)
 
 
 def test_map(executor):
@@ -232,17 +236,31 @@ def test_map_start(executor):
     assert list(m) == [(None, 0)]
 
 
-def test_map_close(executor):
+def test_map_close():
     """Test that closing a running map cancels all remaining tasks."""
-    results = []
-    def func(x):
-        nonlocal results
-        time.sleep(0.05)
-        results.append(x)
-        return x
-    m = executor.map(func, range(10))
-    # must start the generator so that close() has any effect
-    assert next(m) == 0
-    m.close()
+
+    # Create an executor with no workers so we have full control
+    executor = qasync.QThreadExecutor(max_workers=0)
+
+    # Create mock futures with proper result() method
+    mock_futures = []
+    for i in range(10):
+        mock_future = Mock(spec=Future)
+        mock_future.cancel = Mock(return_value=True)
+        mock_future.result = Mock(return_value=i)
+        mock_futures.append(mock_future)
+
+    # Mock submit to return our pre-created futures
+    with patch.object(executor, "submit", side_effect=mock_futures):
+        m = executor.map(lambda x: x, range(10))
+        # must start the generator so that close() has any effect
+        assert next(m) == 0
+        m.close()
+
+    # All futures should have cancel() called:
+    # - The first one via _result_or_cancel after next() consumed it
+    # - The rest via the finally block when the generator is closed
+    for i, f in enumerate(mock_futures):
+        assert f.cancel.called, f"Future {i} should have been cancelled"
+
     executor.shutdown(wait=True, cancel_futures=False)
-    assert len(results) < 10, "Some tasks should have been cancelled"

@@ -91,7 +91,7 @@ jobs:
           run: uv run coverage run --context=${{matrix.qt-version}}
 
       - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.qt-version }}
           path: .coverage.${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.qt-version }}
@@ -124,7 +124,7 @@ jobs:
           ANNOTATE_MISSING_LINES: true
 
       - name: Store coverage comment to be posted
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: steps.coverage_comment.outputs.COMMENT_FILE_WRITTEN == 'true'
         with:
           name: python-coverage-comment-action

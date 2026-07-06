@@ -515,7 +515,7 @@ class _QEventLoop:
 
     def call_later(self, delay, callback, *args, context=None):
         """Register callback to be invoked after a certain delay."""
-        if asyncio.iscoroutinefunction(callback):
+        if inspect.iscoroutinefunction(callback):
             raise TypeError("coroutines cannot be used with call_later")
         if not callable(callback):
             raise TypeError(
